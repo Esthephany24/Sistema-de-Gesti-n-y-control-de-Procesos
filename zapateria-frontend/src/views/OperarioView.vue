@@ -100,7 +100,9 @@ const lotesPendientes = ref([
 // Función para cuando el operario presiona el botón de su sección
 const seleccionarSeccion = (seccion) => {
   seccionSeleccionada.value = seccion;
- 
+  // Aquí en el futuro haríamos un fetch() al Backend para traer los lotes 
+  // específicos de esta sección desde PostgreSQL.
+};
 
 // Función para regresar y elegir otra sección
 const cambiarSeccion = () => {
@@ -112,7 +114,10 @@ const registrarAvance = (idPedido, docenas) => {
   const confirmacion = confirm(`¿Confirmar la salida de ${docenas} docenas del pedido ${idPedido}?`);
   
   if (confirmacion) {
+    // 1. Aquí enviaríamos la petición HTTP (POST/PUT) al Backend (Node.js)
+    // indicando que Esthephany terminó este lote en la sección actual.
     
+    // 2. Simulamos que el lote desaparece de la lista porque ya pasó a la siguiente fase
     lotesPendientes.value = lotesPendientes.value.filter(lote => lote.id !== idPedido);
     
     alert('✅ Registro guardado exitosamente. El lote avanzó a la siguiente etapa.');
