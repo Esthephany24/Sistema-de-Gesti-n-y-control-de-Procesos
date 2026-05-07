@@ -2,7 +2,10 @@
   <div class="ventas-view">
     <div class="header-section">
       <h2>Gestión de Pedidos</h2>
-      <button @click="abrirModal" class="btn-nuevo">+ REGISTRAR PEDIDO</button>
+      <div>
+        <button @click="abrirModal" class="btn-nuevo">+ REGISTRAR PEDIDO</button>
+        <button @click="abrirModalCliente" class="btn-cliente">+ REGISTRAR CLIENTE</button>
+      </div>
     </div>
 
     <div class="tabla-container">
@@ -29,7 +32,7 @@
     <div v-if="mostrarModal" class="modal-overlay">
       <div class="modal-content">
         <header class="modal-header">
-          <h3>REGISTRAR NUEVO PEDIDO</h3>
+          <h3>REGISTRAR NUEVO PEDIDO DE VENTA</h3>
           <button @click="cerrarModal" class="btn-close">&times;</button>
         </header>
         
@@ -75,6 +78,27 @@
       </div>
     </div>
 
+    <div v-if="mostrarModalCliente" class="modal-overlay">
+      <div class="modal-content client-modal">
+        <header class="modal-header">
+          <h3>REGISTRAR NUEVO CLIENTE</h3>
+          <button @click="cerrarModalCliente" class="btn-close">&times;</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>NOMBRE DEL CLIENTE:</label>
+            <input v-model="nuevoCliente.nombre" type="text" placeholder="Ingrese el nombre del cliente" />
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button @click="cerrarModalCliente" class="btn-cancel">Cancelar</button>
+          <button @click="guardarCliente" class="btn-registrar">Registrar Cliente</button>
+        </footer>
+      </div>
+    </div>
+
     <div v-if="mostrarExito" class="modal-overlay">
       <div class="modal-content success-modal">
         <div class="success-icon">✓</div>
@@ -89,8 +113,10 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import './VentasView.css';
 
 const mostrarModal = ref(false);
+const mostrarModalCliente = ref(false);
 const mostrarExito = ref(false); // Nueva variable para el pop-up de exito[]
 const listaPedidos = ref([]);
 const clientes = ref([]);
@@ -104,8 +130,12 @@ const nuevoPedido = ref({
   detalles: [{ color: '', cantidad_docenas: 1 }]
 });
 
+const nuevoCliente = ref({ nombre: '' });
+
 const abrirModal = () => { mostrarModal.value = true; };
 const cerrarModal = () => { mostrarModal.value = false; };
+const abrirModalCliente = () => { mostrarModalCliente.value = true; };
+const cerrarModalCliente = () => { mostrarModalCliente.value = false; };
 const cerrarExito = () => { mostrarExito.value = false; };
 
 const cargarDatos = async () => {
@@ -126,6 +156,23 @@ const cargarDatos = async () => {
 const agregarFilaColor = () => { nuevoPedido.value.detalles.push({ color: '', cantidad_docenas: 1 }); };
 const eliminarFilaColor = (index) => { nuevoPedido.value.detalles.splice(index, 1); };
 
+const guardarCliente = async () => {
+  try {
+    if (!nuevoCliente.value.nombre || !nuevoCliente.value.nombre.trim()) {
+      alert('Por favor ingresa el nombre del cliente.');
+      return;
+    }
+
+    await axios.post('http://localhost:3000/api/clientes', nuevoCliente.value);
+    cerrarModalCliente();
+    await cargarDatos();
+    nuevoCliente.value = { nombre: '' };
+    alert('Cliente registrado exitosamente.');
+  } catch (error) {
+    alert('Error al registrar cliente: ' + (error.response?.data?.error || error.message));
+  }
+};
+
 const guardarPedido = async () => {
   try {
     await axios.post('http://localhost:3000/api/pedidos', nuevoPedido.value);
@@ -145,32 +192,3 @@ const guardarPedido = async () => {
 
 onMounted(cargarDatos);
 </script>
-
-<style scoped>
-.ventas-view { padding: 20px; }
-.header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-
-/* Estilos de la Tabla con Scroll */
-.tabla-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; }
-.tabla-pedidos { width: 100%; border-collapse: collapse; }
-.tabla-pedidos th { position: sticky; top: 0; background: #2c3e50; color: white; padding: 12px; }
-.tabla-pedidos td { padding: 12px; border-bottom: 1px solid #eee; }
-
-/* Estilos de los Modales */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal-content { background: white; width: 500px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-
-/* Pop-up de Éxito específico */
-.success-modal { text-align: center; padding: 40px; }
-.success-icon { font-size: 50px; color: #27ae60; border: 3px solid #27ae60; width: 80px; height: 80px; line-height: 80px; border-radius: 50%; margin: 0 auto 20px; }
-.btn-entendido { background: #27ae60; color: white; border: none; padding: 10px 30px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
-
-/* Otros estilos del formulario */
-.form-group { margin-bottom: 15px; display: flex; flex-direction: column; text-align: left; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-.fila-color { display: flex; gap: 10px; margin-bottom: 8px; }
-.input-color { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-.input-cant { width: 70px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-.btn-registrar { background: #27ae60; color: white; padding: 12px 40px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
-.btn-nuevo { background: #3498db; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-</style>

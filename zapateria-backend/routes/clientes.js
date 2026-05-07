@@ -12,4 +12,23 @@ router.get('/', async (req, res) => {
     }
 });
 
+// POST registrar nuevo cliente
+router.post('/', async (req, res) => {
+    const { nombre } = req.body;
+
+    if (!nombre || !nombre.trim()) {
+        return res.status(400).json({ error: 'El nombre del cliente es obligatorio.' });
+    }
+
+    try {
+        const result = await pool.query(
+            'INSERT INTO clientes (nombre) VALUES ($1) RETURNING id_cliente, nombre',
+            [nombre.trim()]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
