@@ -1,186 +1,367 @@
 <template>
   <div class="dashboard-container">
     <header class="dashboard-header">
-      <h2><i class="fas fa-chart-line"></i> Panel de Control - Planta de Producción</h2>
-      <p>Monitoreo en tiempo real del flujo de trabajo</p>
+      <div>
+        <p class="eyebrow">Planta de Producción</p>
+        <h2>Dashboard Kanban de Producción</h2>
+        <p class="subtitle">Visualiza el avance de cada docena en tiempo real.</p>
+      </div>
+      <div class="header-badge">Sistema Industrial de Calzado</div>
     </header>
 
     <section class="kpi-grid">
-      <div class="kpi-card primary">
-        <div class="kpi-icon"><i class="fas fa-shoe-prints"></i></div>
-        <div class="kpi-data">
-          <h3>Total en Producción</h3>
-          <p class="kpi-number">{{ totalDocenasActivas }} docenas</p>
+      <article class="kpi-card blue">
+        <div>
+          <p class="kpi-label">Total de Docenas Activas</p>
+          <h3>{{ totalDocenasActivas }}</h3>
         </div>
-      </div>
-      <div class="kpi-card success">
-        <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
-        <div class="kpi-data">
-          <h3>Terminados Hoy</h3>
-          <p class="kpi-number">{{ docenasTerminadasHoy }} docenas</p>
+        <span class="kpi-pill">Activo</span>
+      </article>
+
+      <article class="kpi-card green">
+        <div>
+          <p class="kpi-label">En Fase</p>
+          <h3>{{ totalEnProceso }}</h3>
         </div>
-      </div>
-      <div class="kpi-card warning">
-        <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
-        <div class="kpi-data">
-          <h3>Alertas de Stock</h3>
-          <p class="kpi-number">2 Insumos bajos</p>
+        <span class="kpi-pill">Kanban</span>
+      </article>
+
+      <article class="kpi-card yellow">
+        <div>
+          <p class="kpi-label">Docenas en Acabado</p>
+          <h3>{{ docenasTerminadasHoy }}</h3>
+        </div>
+        <span class="kpi-pill">Listo</span>
+      </article>
+    </section>
+
+    <section class="kanban-board">
+      <div class="kanban-column" v-for="stage in stages" :key="stage.key">
+        <div class="column-header" :style="{ backgroundColor: stage.color }">
+          <strong>{{ stage.label }}</strong>
+          <span>{{ cardsByStage[stage.key]?.length || 0 }}</span>
+        </div>
+
+        <div class="column-body">
+          <div v-if="cardsByStage[stage.key]?.length === 0" class="empty-column">
+            Ninguna docena en esta etapa.
+          </div>
+
+          <article
+            class="kanban-card"
+            v-for="docena in cardsByStage[stage.key]"
+            :key="docena.id_docena"
+          >
+            <div class="card-top">
+              <span class="chip">Docena {{ docena.numero_docena }}</span>
+              <span class="status">{{ docena.estado_actual }}</span>
+            </div>
+            <div class="card-body">
+              <div class="qr-holder">
+                <img :src="qrUrl(docena.codigo_qr)" alt="QR" />
+              </div>
+              <div class="card-info">
+                <p class="model">{{ docena.modelo }}</p>
+                <p class="detail">Color: <strong>{{ docena.color }}</strong></p>
+                <p class="detail">Serie: {{ docena.serie || 'N/D' }}</p>
+                <p class="detail">Cliente: {{ docena.cliente }}</p>
+              </div>
+            </div>
+          </article>
         </div>
       </div>
     </section>
 
-    <section class="production-flow">
-      <h3>Estado Actual por Sección (Haz clic en una sección para ver detalles)</h3>
-      <div class="stages-grid">
-        <div 
-          class="stage-card" 
-          v-for="(seccion, index) in estadoSecciones" 
-          :key="index"
-          :class="{ 'active-selection': seccionDetalle?.nombre === seccion.nombre }"
-          @click="mostrarDetalle(seccion)"
-        >
-          <h4>{{ seccion.nombre }}</h4>
-          <div class="stage-stats">
-            <span class="qty">{{ seccion.docenas }}</span>
-            <span class="label">docenas</span>
-          </div>
-          <div class="progress-bar-container">
-            <div 
-              class="progress-fill" 
-              :style="{ width: calcularPorcentaje(seccion.docenas) + '%' }"
-              :class="{ 'overload': calcularPorcentaje(seccion.docenas) > 80 }"
-            ></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section v-if="seccionDetalle" class="detail-panel">
-      <div class="detail-card">
-        <div class="detail-header">
-          <h3>Detalles de Producción en: <span class="highlight-text">{{ seccionDetalle.nombre }}</span></h3>
-          <button @click="seccionDetalle = null" class="btn-close">&times;</button>
-        </div>
-        
-        <table class="detail-table">
-          <thead>
-            <tr>
-              <th>Cód. Lote</th>
-              <th>Docenas</th>
-              <th>Operario Responsable</th>
-              <th>En proceso desde (Fecha/Hora)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in datosFiltrados" :key="item.lote">
-              <td class="fw-bold">{{ item.lote }}</td>
-              <td><span class="badge-blue">{{ item.docenas }} doc.</span></td>
-              <td><i class="fas fa-user"></i> {{ item.operario }}</td>
-              <td><i class="far fa-clock"></i> {{ item.fechaInicio }}</td>
-            </tr>
-            <tr v-if="datosFiltrados.length === 0">
-              <td colspan="4" class="empty-state">No hay registros detallados para esta sección en este momento.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <footer class="board-footer">
+      <div v-if="error" class="feedback error">Error: {{ error }}</div>
+      <div v-else class="feedback">Actualización automática cada 7 segundos.</div>
+    </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
-const docenasTerminadasHoy = ref(15);
+const stages = [
+  { key: 'CORTE', label: 'CORTE', color: '#2f80ed' },
+  { key: 'APARADO', label: 'APARADO', color: '#f2c94c' },
+  { key: 'ARMADO', label: 'ARMADO', color: '#f2994a' },
+  { key: 'ACABADO', label: 'ACABADO', color: '#27ae60' }
+];
 
-const estadoSecciones = ref([
-  { nombre: 'Cortado', docenas: 25 },
-  { nombre: 'Alistado', docenas: 10 },
-  { nombre: 'Aparado', docenas: 45 }, 
-  { nombre: 'Armado', docenas: 12 },
-  { nombre: 'Rematado', docenas: 8 }
-]);
+const trazabilidad = ref([]);
+const error = ref(null);
+const loading = ref(false);
+let refreshInterval = null;
 
-const totalDocenasActivas = computed(() => {
-  return estadoSecciones.value.reduce((total, seccion) => total + seccion.docenas, 0);
-});
-
-const capacidadMaximaIdeal = 50; 
-const calcularPorcentaje = (docenas) => {
-  let porcentaje = (docenas / capacidadMaximaIdeal) * 100;
-  return porcentaje > 100 ? 100 : Math.round(porcentaje);
-};
-
-// --- NUEVA LÓGICA DE DETALLES ---
-const seccionDetalle = ref(null);
-
-// Base de datos simulada con los registros exactos por AREa
-const detalleProduccion = ref([
-  { seccion: 'Cortado', lote: 'P-003', docenas: 2, operario: 'Esthephany', fechaInicio: '22/11/2025 14:35:17' },
-  { seccion: 'Cortado', lote: 'P-008', docenas: 23, operario: 'Carlos S.', fechaInicio: '28/04/2026 08:15:00' },
-  { seccion: 'Aparado', lote: 'P-001', docenas: 45, operario: 'Pedro M.', fechaInicio: '27/04/2026 16:30:00' },
-  { seccion: 'Armado', lote: 'P-002', docenas: 12, operario: 'Luis F.', fechaInicio: '28/04/2026 10:00:00' },
-]);
-
-const mostrarDetalle = (seccion) => {
-  // Si se hace clic en la misma sección abierta, se cierra
-  if (seccionDetalle.value?.nombre === seccion.nombre) {
-    seccionDetalle.value = null;
-  } else {
-    seccionDetalle.value = seccion;
+const fetchTrazabilidad = async () => {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await fetch('http://localhost:3000/api/produccion/trazabilidad');
+    if (!response.ok) throw new Error('No fue posible cargar los datos de trazabilidad');
+    trazabilidad.value = await response.json();
+  } catch (err) {
+    error.value = err.message || 'Error de red';
+  } finally {
+    loading.value = false;
   }
 };
 
-const datosFiltrados = computed(() => {
-  if (!seccionDetalle.value) return [];
-  return detalleProduccion.value.filter(d => d.seccion === seccionDetalle.value.nombre);
+const cardsByStage = computed(() => {
+  const grouped = { CORTE: [], APARADO: [], ARMADO: [], ACABADO: [] };
+  trazabilidad.value.forEach((item) => {
+    if (grouped[item.estado_actual]) grouped[item.estado_actual].push(item);
+  });
+  return grouped;
+});
+
+const totalDocenasActivas = computed(() => trazabilidad.value.length);
+const totalEnProceso = computed(() => trazabilidad.value.filter((item) => item.estado_actual !== 'ACABADO').length);
+const docenasTerminadasHoy = computed(() => cardsByStage.value.ACABADO.length);
+
+const qrUrl = (codigo) => {
+  const payload = encodeURIComponent(codigo || 'ZAPATERIA');
+  return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${payload}`;
+};
+
+onMounted(() => {
+  fetchTrazabilidad();
+  refreshInterval = setInterval(fetchTrazabilidad, 7000);
+});
+
+onUnmounted(() => {
+  if (refreshInterval) clearInterval(refreshInterval);
 });
 </script>
 
 <style scoped>
-.dashboard-container { padding: 20px; background-color: #f4f6f9; min-height: 100vh; font-family: Arial, sans-serif; }
-.dashboard-header { margin-bottom: 30px; color: #2c3e50; }
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
-.kpi-card { display: flex; align-items: center; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #ccc; }
-.kpi-card.primary { border-left-color: #3498db; }
-.kpi-card.success { border-left-color: #2ecc71; }
-.kpi-card.warning { border-left-color: #f1c40f; }
-.kpi-icon { font-size: 2.5rem; margin-right: 20px; color: #7f8c8d; }
-.kpi-data h3 { margin: 0; font-size: 0.9rem; color: #95a5a6; text-transform: uppercase; }
-.kpi-number { margin: 5px 0 0; font-size: 1.8rem; font-weight: bold; color: #2c3e50; }
-.production-flow h3 { color: #2c3e50; margin-bottom: 20px; }
-.stages-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+.dashboard-container {
+  min-height: 100vh;
+  padding: 28px;
+  background: linear-gradient(180deg, #f7fafc 0%, #e8eff6 100%);
+  color: #1f2937;
+  font-family: 'Inter', system-ui, sans-serif;
+}
 
-.stage-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; }
-.stage-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-.stage-card.active-selection { border-color: #3498db; background-color: #f0f8ff; transform: scale(1.02); }
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 28px;
+}
 
-.stage-card h4 { margin-top: 0; color: #34495e; font-size: 1.1rem; }
-.stage-stats { margin: 15px 0; }
-.stage-stats .qty { font-size: 2rem; font-weight: bold; color: #2980b9; display: block; }
-.stage-stats .label { font-size: 0.85rem; color: #7f8c8d; }
-.progress-bar-container { width: 100%; height: 8px; background-color: #ecf0f1; border-radius: 4px; overflow: hidden; }
-.progress-fill { height: 100%; background-color: #3498db; transition: width 0.3s ease; }
-.progress-fill.overload { background-color: #e74c3c; }
+.eyebrow {
+  margin: 0 0 8px;
+  color: #4b5563;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
 
-/* NUEVOS ESTILOS PARA EL PANEL DE DETALLES */
-.detail-panel { margin-top: 30px; animation: fadeIn 0.4s ease; }
-.detail-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-.detail-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 15px; }
-.detail-header h3 { margin: 0; color: #2c3e50; }
-.highlight-text { color: #3498db; }
-.btn-close { background: none; border: none; font-size: 2rem; color: #7f8c8d; cursor: pointer; line-height: 1; }
-.btn-close:hover { color: #e74c3c; }
+.dashboard-header h2 {
+  margin: 0;
+  font-size: clamp(1.9rem, 2.5vw, 2.6rem);
+  color: #111827;
+}
 
-.detail-table { width: 100%; border-collapse: collapse; }
-.detail-table th { background-color: #f8f9fa; color: #34495e; padding: 12px 15px; text-align: left; font-weight: 600; border-bottom: 2px solid #ecf0f1; }
-.detail-table td { padding: 15px; border-bottom: 1px solid #ecf0f1; color: #555; }
-.fw-bold { font-weight: bold; color: #2c3e50; }
-.badge-blue { background-color: #ebf5fb; color: #2980b9; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 0.9rem; border: 1px solid #d6eaf8; }
-.empty-state { text-align: center; color: #95a5a6; font-style: italic; padding: 30px !important; }
+.subtitle {
+  margin: 10px 0 0;
+  color: #4b5563;
+  max-width: 560px;
+}
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+.header-badge {
+  align-self: center;
+  background: rgba(47, 128, 237, 0.12);
+  color: #1d4ed8;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.kpi-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 22px;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+}
+
+.kpi-label {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.kpi-card h3 {
+  margin: 10px 0 0;
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+}
+
+.kpi-pill {
+  background: rgba(30, 64, 175, 0.08);
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.blue { border-left: 4px solid #2f80ed; }
+.green { border-left: 4px solid #27ae60; }
+.yellow { border-left: 4px solid #f2c94c; }
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.kanban-column {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 22px;
+  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.column-body {
+  padding: 20px;
+  min-height: 360px;
+  display: grid;
+  gap: 16px;
+}
+
+.empty-column {
+  color: #6b7280;
+  padding: 24px;
+  border: 1px dashed #d1d5db;
+  border-radius: 18px;
+  text-align: center;
+  background: #f8fafc;
+}
+
+.kanban-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.chip {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #2563eb;
+  background: rgba(59, 130, 246, 0.12);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.status {
+  font-size: 0.8rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.card-body {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.qr-holder {
+  background: #eef2ff;
+  padding: 16px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.qr-holder img {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+}
+
+.card-info {
+  display: grid;
+  gap: 8px;
+}
+
+.model {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.detail {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.board-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.feedback {
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+@media (max-width: 1250px) {
+  .kanban-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 820px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .kanban-board { grid-template-columns: 1fr; }
+  .dashboard-header { flex-direction: column; align-items: flex-start; }
 }
 </style>
