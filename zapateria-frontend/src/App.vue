@@ -80,6 +80,9 @@ body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 /* Sidebar */
 .sidebar {
   width: 260px;
+  min-width: 260px;
+  max-width: 260px;
+  flex: 0 0 260px;
   background-color: var(--primary);
   color: white;
   padding: 20px;

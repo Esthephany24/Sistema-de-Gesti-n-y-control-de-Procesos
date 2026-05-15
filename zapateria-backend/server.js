@@ -18,7 +18,9 @@ app.use('/api/clientes', routesClientes);
 app.use('/api/modelos', routesModelos);
 app.use('/api/series', routesSeries);
 app.use('/api/pedidos', routesPedidos);
+console.log('Mounting produccion routes...');
 app.use('/api/produccion', routesProduccion);
+console.log('Produccion routes mounted');
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Servidor de Zapatería corriendo en puerto ${PORT}`));
