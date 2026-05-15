@@ -1,4 +1,4 @@
-import './style.css'
+import './styles/global.css'
 import { createApp } from 'vue'
 import App from './App.vue'
 import { router } from './router' // Importamos el archivo de rutas que creamos

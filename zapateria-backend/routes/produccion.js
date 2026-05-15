@@ -349,57 +349,57 @@ router.put('/avanzar', async (req, res) => {
 
       // Verificar si todo el pedido ya terminó
 
-      const pedidoResult = await client.query(
+    const pedidoResult = await client.query(
+      `
+      SELECT dp.id_pedido
+      FROM detalle_pedido dp
+      INNER JOIN control_docena cd
+        ON dp.id_detalle = cd.id_detalle
+      WHERE cd.id_docena = $1
+      LIMIT 1
+      `,
+      [id_docena]
+    );
+
+    const idPedido = pedidoResult.rows[0].id_pedido;
+
+    // Validar si todas las docenas están acabadas
+
+    const validarFinalizado = await client.query(
+      `
+      SELECT COUNT(*) AS pendientes
+      FROM control_docena cd
+      INNER JOIN detalle_pedido dp
+        ON cd.id_detalle = dp.id_detalle
+      WHERE dp.id_pedido = $1
+      AND cd.estado_actual <> 'Doc. Acabadas'
+      `,
+      [idPedido]
+    );
+
+    if (parseInt(validarFinalizado.rows[0].pendientes) === 0) {
+
+      // Pedido COMPLETADO
+
+      await client.query(
         `
-        SELECT dp.id_pedido
-        FROM detalle_pedido dp
-        INNER JOIN control_docena cd
-          ON dp.id_detalle = cd.id_detalle
-        WHERE cd.id_docena = $1
-        LIMIT 1
-        `,
-        [id_docena]
-      );
-
-      const idPedido = pedidoResult.rows[0].id_pedido;
-
-      // Validar si todas las docenas están acabadas
-
-      const validarFinalizado = await client.query(
-        `
-        SELECT COUNT(*) AS pendientes
-        FROM control_docena cd
-        INNER JOIN detalle_pedido dp
-          ON cd.id_detalle = dp.id_detalle
-        WHERE dp.id_pedido = $1
-        AND cd.estado_actual <> 'Doc. Acabadas'
+        UPDATE pedidos
+        SET estado = 'COMPLETADO'
+        WHERE id_pedido = $1
         `,
         [idPedido]
       );
 
-      if (parseInt(validarFinalizado.rows[0].pendientes) === 0) {
+      // Crear registro inicial de despacho
 
-        // Pedido COMPLETADO
-
-        await client.query(
-          `
-          UPDATE pedidos
-          SET estado = 'COMPLETADO'
-          WHERE id_pedido = $1
-          `,
-          [idPedido]
-        );
-
-        // Crear registro inicial de despacho
-
-        await client.query(
-          `
-          INSERT INTO despachos (id_pedido)
-          VALUES ($1)
-          `,
-          [idPedido]
-        );
-      }
+      await client.query(
+        `
+        INSERT INTO despachos (id_pedido)
+        VALUES ($1)
+        `,
+        [idPedido]
+      );
+    }
 
       // FINALIZAR asignacion activa actual
 
@@ -419,9 +419,30 @@ router.put('/avanzar', async (req, res) => {
       await client.query(
         `
         INSERT INTO trazabilidad_produccion
-        (id_docena,id_operario,etapa,fecha_inicio,fecha_fin,observacion)
-        VALUES($1,$2,$3,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,$4)`,
-        [id_docena,id_operario,estadoActual,obs]
+        (
+          id_docena,
+          id_operario,
+          etapa,
+          fecha_inicio,
+          fecha_fin,
+          observacion
+        )
+        VALUES
+        (
+          $1,
+          $2,
+          $3,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP,
+          $4
+        )
+        `,
+        [
+          id_docena,
+          id_operario,
+          estadoActual,
+          obs
+        ]
       );
 
       await client.query('COMMIT');
@@ -680,6 +701,85 @@ router.get('/trazabilidad/doc-acabado-detalle/:id_pedido', async (req, res) => {
     `;
 
     const result = await pool.query(query, [id_pedido]);
+
+    res.json(result.rows);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+
+  }
+
+});
+
+router.get('/dashboard/detalle/:estado', async (req, res) => {
+
+  try {
+
+    const estado = (req.params.estado || '').trim();
+
+    const dbState = stageToDbState(estado);
+
+    if (!dbState) {
+      return res.status(400).json({
+        error: 'Estado inválido'
+      });
+    }
+
+    const query = `
+      SELECT
+        p.id_pedido,
+
+        cd.id_docena,
+
+        CONCAT(
+          'P-',
+          LPAD(p.id_pedido::text, 3, '0')
+        ) AS lote,
+
+        dp.color,
+
+        s.descripcion AS serie,
+
+        1 AS docenas,
+
+        CONCAT(
+          COALESCE(o.nombre, ''),
+          ' ',
+          COALESCE(o.apellido, '')
+        ) AS operario,
+
+        tp.fecha_inicio
+
+      FROM control_docena cd
+
+      INNER JOIN detalle_pedido dp
+        ON cd.id_detalle = dp.id_detalle
+
+      INNER JOIN pedidos p
+        ON dp.id_pedido = p.id_pedido
+
+      LEFT JOIN series s
+        ON dp.id_serie = s.id_serie
+
+      LEFT JOIN trazabilidad_produccion tp
+        ON tp.id_docena = cd.id_docena
+        AND tp.fecha_fin IS NULL
+
+      LEFT JOIN operarios o
+        ON o.id_operario = tp.id_operario
+
+      WHERE cd.estado_actual = $1
+
+      ORDER BY
+        tp.fecha_inicio ASC NULLS LAST;
+    `;
+
+    const result = await pool.query(query, [dbState]);
 
     res.json(result.rows);
 

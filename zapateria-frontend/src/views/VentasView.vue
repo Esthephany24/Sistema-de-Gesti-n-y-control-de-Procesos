@@ -16,6 +16,7 @@
             <th>Cliente</th>
             <th>Fecha</th>
             <th>Total Docenas</th>
+            <th>Estado</th>
           </tr>
         </thead>
         <tbody>
@@ -23,7 +24,13 @@
             <td>#{{ ped.id_pedido }}</td>
             <td>{{ ped.cliente }}</td>
             <td>{{ new Date(ped.fecha_registro).toLocaleDateString() }}</td>
-            <td>{{ ped.total_docenas || 0 }}</td>
+            <td>{{ ped.total_doc_pedido || 0 }}</td>
+            <td>
+              <span
+                class="estado-badge" :class="ped.estado?.toLowerCase()">
+                {{ ped.estado }}
+              </span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -40,7 +47,7 @@
           <div class="form-group">
             <label>CLIENTE:</label>
             <select v-model="nuevoPedido.id_cliente">
-              <option v-for="c in clientes" :key="c.id_cliente" :value="c.id_cliente">{{ c.nombre }}</option>
+              <option v-for="c in clientes" :key="c.id_cliente" :value="c.id_cliente">{{ c.nombre }} {{ c.apellido }}</option>
             </select>
           </div>
 
@@ -90,6 +97,10 @@
             <label>NOMBRE DEL CLIENTE:</label>
             <input v-model="nuevoCliente.nombre" type="text" placeholder="Ingrese el nombre del cliente" />
           </div>
+          <div class="form-group">
+            <label>APELLIDO:</label>
+            <input v-model="nuevoCliente.apellido" type="text" placeholder="Ingrese el apellido del cliente"/>
+          </div>
         </div>
 
         <footer class="modal-footer">
@@ -103,7 +114,7 @@
       <div class="modal-content success-modal">
         <div class="success-icon">✓</div>
         <h3>¡Registro Exitoso!</h3>
-        <p>El pedido ha sido registrado y la trazabilidad de las docenas se generó con éxito.</p>
+        <p>Se registro exitosamente.</p>
         <button @click="cerrarExito" class="btn-entendido">Entendido</button>
       </div>
     </div>
@@ -130,7 +141,7 @@ const nuevoPedido = ref({
   detalles: [{ color: '', cantidad_docenas: 1 }]
 });
 
-const nuevoCliente = ref({ nombre: '' });
+const nuevoCliente = ref({ nombre: '', apellido: '' });
 
 const abrirModal = () => { mostrarModal.value = true; };
 const cerrarModal = () => { mostrarModal.value = false; };
@@ -158,7 +169,8 @@ const eliminarFilaColor = (index) => { nuevoPedido.value.detalles.splice(index, 
 
 const guardarCliente = async () => {
   try {
-    if (!nuevoCliente.value.nombre || !nuevoCliente.value.nombre.trim()) {
+    if (!nuevoCliente.value.nombre || !nuevoCliente.value.nombre?.trim() ||
+        !nuevoCliente.value.apellido || !nuevoCliente.value.apellido?.trim()) {
       alert('Por favor ingresa el nombre del cliente.');
       return;
     }
@@ -166,8 +178,10 @@ const guardarCliente = async () => {
     await axios.post('http://localhost:3000/api/clientes', nuevoCliente.value);
     cerrarModalCliente();
     await cargarDatos();
-    nuevoCliente.value = { nombre: '' };
-    alert('Cliente registrado exitosamente.');
+    nuevoCliente.value = { nombre: '', apellido: '' };
+    /*alert('Cliente registrado exitosamente.');*/
+    mostrarExito.value = true;
+    cerrarModalCliente();
   } catch (error) {
     alert('Error al registrar cliente: ' + (error.response?.data?.error || error.message));
   }

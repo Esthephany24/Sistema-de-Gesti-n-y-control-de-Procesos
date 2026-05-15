@@ -6,12 +6,13 @@ const pool = require('../models/db');
 router.get('/lista', async (req, res) => {
     try {
         const query = `
-            SELECT p.id_pedido, c.nombre as cliente, p.fecha_registro,
-            SUM(dp.cantidad_docenas) as total_docenas
+            SELECT p.id_pedido,CONCAT(c.nombre, ' ', c.apellido) AS cliente,
+            p.fecha_registro,
+            p.estado,
+            P.total_doc_pedido
             FROM pedidos p
             JOIN clientes c ON p.id_cliente = c.id_cliente
-            LEFT JOIN detalle_pedido dp ON p.id_pedido = dp.id_pedido
-            GROUP BY p.id_pedido, c.nombre
+            GROUP BY p.id_pedido, c.nombre, c.apellido,P.fecha_registro, p.estado, P.total_doc_pedido
             ORDER BY p.fecha_registro DESC`;
         const result = await pool.query(query);
         res.json(result.rows);
@@ -24,17 +25,21 @@ router.get('/lista', async (req, res) => {
 router.post('/', async (req, res) => {
     const { id_cliente, id_modelo, id_serie, detalles } = req.body;
     const client = await pool.connect();
-
+    if (!id_cliente || !id_modelo || !id_serie) {
+        throw new Error('Faltan datos obligatorios');
+    }
     try {
         await client.query('BEGIN');
 
         const pedidoRes = await client.query(
-            'INSERT INTO pedidos (id_cliente) VALUES ($1) RETURNING id_pedido',
-            [id_cliente]
+            'INSERT INTO pedidos (id_cliente, estado, total_doc_pedido) VALUES ($1,$2,$3) RETURNING id_pedido',
+            [id_cliente, 'PENDIENTE', 0]
         );
         const idPedido = pedidoRes.rows[0].id_pedido;
+        let totalDocenas = 0;
 
         for (const item of detalles) {
+            totalDocenas += item.cantidad_docenas;
             const detalleRes = await client.query(
                 'INSERT INTO detalle_pedido (id_pedido, id_modelo, id_serie, color, cantidad_docenas) VALUES ($1, $2, $3, $4, $5) RETURNING id_detalle',
                 [idPedido, id_modelo, id_serie, item.color, item.cantidad_docenas]
@@ -48,11 +53,18 @@ router.post('/', async (req, res) => {
 
                 await client.query(
                     'INSERT INTO control_docena (id_detalle, numero_docena, codigo_qr, estado_actual) VALUES ($1, $2, $3, $4)',
-                    [idDetalle, i, codigoQR, 'CORTE']
+                    [idDetalle, i, codigoQR, 'Por cortar']
                 );
             }
         }
-
+        await client.query(
+            `
+            UPDATE pedidos
+            SET total_doc_pedido = $1
+            WHERE id_pedido = $2
+            `,
+            [totalDocenas, idPedido]
+        );
         await client.query('COMMIT');
         res.status(201).json({ message: "Pedido registrado exitosamente", id_pedido: idPedido });
     } catch (error) {

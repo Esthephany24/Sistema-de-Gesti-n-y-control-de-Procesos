@@ -1,0 +1,65 @@
+:root {
+  --bg: #090b12;
+  --surface: #0f172a;
+  --surface-2: #111827;
+  --surface-3: #111827;
+  --text: #e5e7eb;
+  --text-muted: #9ca3af;
+  --text-strong: #f8fafc;
+  --border: rgba(148, 163, 184, 0.18);
+  --border-strong: rgba(148, 163, 184, 0.28);
+  --accent: #38bdf8;
+  --accent-strong: #22c55e;
+  --accent-soft: rgba(56, 189, 248, 0.18);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.35) 0 10px 20px -10px;
+  --font: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  background: var(--bg);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body, button, input, select, textarea {
+  color: inherit;
+  font: inherit;
+}
+
+a, button {
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(56, 189, 248, 0.25);
+  color: #fff;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-strong);
+  margin: 0;
+}
+
+button {
+  border: none;
+}
+
+::placeholder {
+  color: var(--text-muted);
+}

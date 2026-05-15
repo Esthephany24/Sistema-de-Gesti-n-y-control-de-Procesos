@@ -49,6 +49,7 @@
 </template>
 
 <script setup>
+import './styles/App.css';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
@@ -67,72 +68,4 @@ const currentRouteName = computed(() => {
 });
 </script>
 
-<style>
-/* Diseño Base para la Aplicación de Tesis */
-:root {
-  --primary: #373549;
-  --secondary: #1a3b94;
-  --accent: #3498db;
-  --bg-light: #f4f7f6;
-}
 
-body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
-#layout {
-  display: flex;
-  height: 100vh;
-}
-
-/* Sidebar */
-.sidebar {
-  width: 260px;
-  min-width: 260px;
-  max-width: 260px;
-  flex: 0 0 260px;
-  background-color: var(--primary);
-  color: white;
-  padding: 20px;
-}
-
-.logo { border-bottom: 1px solid #537a4a; margin-bottom: 20px; padding-bottom: 10px; }
-.logo h2 { margin: 0; color: #fff; font-size: 1.2rem; }
-
-.nav-links { list-style: none; padding: 0; }
-.nav-links li { margin: 15px 0; }
-.nav-links a {
-  color: #bdc3c7;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  border-radius: 5px;
-  transition: 0.3s;
-}
-
-.nav-links a:hover, .active {
-  background-color: var(--secondary);
-  color: white !important;
-}
-
-/* Contenido Principal */
-.content {
-  flex: 1;
-  background-color: var(--bg-light);
-  display: flex;
-  flex-direction: column;
-}
-
-.top-header {
-  background: rgb(64, 66, 83);
-  padding: 15px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.view-container {
-  padding: 30px;
-  overflow-y: auto;
-}
-</style>

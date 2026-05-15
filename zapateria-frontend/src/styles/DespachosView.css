@@ -1,0 +1,16 @@
+.despacho-container { padding: 24px; background: #0b1220; min-height: 100vh; color: #e5e7eb; }
+.table-container { margin-top: 20px; overflow: auto; }
+.despacho-table { width: 100%; border-collapse: collapse; }
+.despacho-table th, .despacho-table td { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.despacho-table th { color: #94a3b8; background: rgba(255,255,255,0.04); }
+.despacho-table td { color: #e2e8f0; }
+.badge { padding: 6px 12px; border-radius: 999px; font-size: .8rem; font-weight: bold; color: #0f172a; }
+.pendiente_guia { background: #fbbf24; }
+.guia_generada { background: #34d399; }
+.enviado { background: #38bdf8; }
+.entregado { background: #22c55e; }
+.actions { display: flex; gap: 10px; }
+.btn-guide, .btn-send, .btn-deliver { border: none; padding: 8px 12px; border-radius: 10px; cursor: pointer; color: white; }
+.btn-guide { background: #3b82f6; }
+.btn-send { background: #10b981; }
+.btn-deliver { background: #22c55e; }

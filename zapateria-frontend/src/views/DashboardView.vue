@@ -61,6 +61,8 @@
           <thead>
             <tr>
               <th>Cód. Lote</th>
+              <th>Color</th>
+              <th>Serie</th>
               <th>Docenas</th>
               <th>Operario Responsable</th>
               <th>En proceso desde (Fecha/Hora)</th>
@@ -69,12 +71,14 @@
           <tbody>
             <tr v-for="item in datosFiltrados" :key="item.lote + item.operario + item.fechaInicio">
               <td class="fw-bold">{{ item.lote }}</td>
+              <td>{{ item.color || 'N/D' }}</td>
+              <td>{{ item.serie || 'N/D' }}</td>
               <td><span class="badge-blue">{{ item.docenas }} doc.</span></td>
               <td><i class="fas fa-user"></i> {{ item.operario }}</td>
               <td><i class="far fa-clock"></i> {{ item.fechaInicio }}</td>
             </tr>
             <tr v-if="datosFiltrados.length === 0">
-              <td colspan="4" class="empty-state">No hay registros detallados para esta sección en este momento.</td>
+              <td colspan="6" class="empty-state">No hay registros detallados para esta sección en este momento.</td>
             </tr>
           </tbody>
         </table>
@@ -84,6 +88,7 @@
 </template>
 
 <script setup>
+import '../styles/DashboardView.css';
 import { ref, computed, onMounted } from 'vue';
 
 const seccionDetalle = ref(null);
@@ -152,17 +157,19 @@ const fetchSecciones = async () => {
     loading.value = false;
   }
 };
-
+/*
 const fetchDetallePorSeccion = async (seccion) => {
   try {
     const estadoDb = stateMap[seccion.key];
-    const response = await fetch(`http://localhost:3000/api/produccion/trazabilidad/estado/${estadoDb}`);
+    const response = await fetch(`http://localhost:3000/api/produccion/trazabilidad/operarios/${estadoDb}`);
     if (!response.ok) throw new Error('No se pudieron cargar los detalles');
     const data = await response.json();
 
     detalleProduccion.value = data.map((item) => ({
       seccion: seccion.nombre,
       lote: `P-${String(item.id_pedido).padStart(3, '0')}`,
+      color: item.color || 'N/D',
+      serie: item.serie || 'N/D',
       docenas: 1,
       operario: item.operario_asignado || 'Sin asignar',
       fechaInicio: formatDate(item.fecha_inicio)
@@ -171,6 +178,48 @@ const fetchDetallePorSeccion = async (seccion) => {
     detalleProduccion.value = [];
     error.value = err.message || 'Error al cargar los detalles';
   }
+};*/
+const fetchDetallePorSeccion = async (seccion) => {
+
+  try {
+
+    const estadoDb = stateMap[seccion.key];
+
+    const response = await fetch(
+      `http://localhost:3000/api/produccion/dashboard/detalle/${estadoDb}`
+    );
+
+    if (!response.ok) {
+      throw new Error('No se pudieron cargar los detalles');
+    }
+
+    const data = await response.json();
+
+    detalleProduccion.value = data.map((item) => ({
+
+      lote: item.lote,
+
+      color: item.color || 'N/D',
+
+      serie: item.serie || 'N/D',
+
+      docenas: item.docenas || 1,
+
+      operario: item.operario?.trim() || 'Sin asignar',
+
+      fechaInicio: formatDate(item.fecha_inicio)
+
+    }));
+
+  } catch (err) {
+
+    detalleProduccion.value = [];
+
+    error.value =
+      err.message || 'Error al cargar los detalles';
+
+  }
+
 };
 
 const mostrarDetalle = async (seccion) => {

@@ -126,6 +126,7 @@
 </template>
 
 <script setup>
+import '../styles/AlmacenView.css';
 import { ref, computed } from 'vue';
 
 const busqueda = ref('');
@@ -183,46 +184,3 @@ const guardarMovimiento = () => {
   cerrarModal();
 };
 </script>
-
-<style scoped>
-.almacen-container { padding: 20px; background-color: #f4f7f6; min-height: 100vh; }
-.inventory-summary { display: flex; gap: 20px; margin-bottom: 25px; }
-.summary-card { display: flex; align-items: center; background: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); min-width: 200px; border-left: 5px solid #3498db; }
-.summary-card.alert { border-left-color: #e74c3c; }
-.icon-box { font-size: 2rem; color: #bdc3c7; margin-right: 15px; }
-.number { font-size: 1.5rem; font-weight: bold; margin: 0; }
-
-.toolbar { display: flex; justify-content: space-between; margin-bottom: 20px; }
-.search-box input { padding: 10px 15px; border-radius: 8px; border: 1px solid #ddd; width: 300px; }
-.btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
-.btn-in { background-color: #27ae60; }
-
-.inventory-table-section { background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 10px; }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 15px; background: #f8f9fa; border-bottom: 2px solid #eee; }
-.data-table td { padding: 15px; border-bottom: 1px solid #f1f1f1; }
-
-/* Botones de acción en la tabla */
-.actions-cell { display: flex; gap: 8px; }
-.btn-action-tab { border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; }
-.btn-in-tab { background-color: #e8f5e9; color: #2e7d32; }
-.btn-out-tab { background-color: #fff3e0; color: #ef6c00; }
-
-/* ESTILOS DEL MODAL */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal-content { background: white; width: 90%; max-width: 500px; border-radius: 12px; overflow: hidden; animation: slideDown 0.3s ease; }
-.modal-header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-.btn-close { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
-
-.form-body { padding: 20px; }
-.info-item { margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 6px; }
-.form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-.form-group label { font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; }
-.form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
-
-.modal-footer { padding: 15px 20px; background: #f8f9fa; display: flex; justify-content: flex-end; gap: 10px; }
-.btn-cancel { background: #bdc3c7; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-.btn-save { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-
-@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-</style>
