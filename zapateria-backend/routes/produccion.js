@@ -75,6 +75,28 @@ const stageProgressFlow = {
   'Doc. Acabadas': 'Doc. Acabadas'
 };
 
+const stageRoleMap = {
+  'Por cortar': 'Cortado',
+  'Cortado': 'Alistado',
+  'Alistado': 'Aparado',
+  'Aparado': 'Empastado',
+  'Empastado': 'Armado',
+  'Armado': 'Pegado',
+  'Pegado': 'Rematado',
+  'Rematado': 'Rematado'
+};
+
+const operarioRolMap = {
+  'Por cortar': 'CORTADO',
+  'Cortado': 'ALISTADO',
+  'Alistado': 'APARADO',
+  'Aparado': 'EMPASTADO',
+  'Empastado': 'ARMADO',
+  'Armado': 'PEGADO',
+  'Pegado': 'REMATADO',
+  'Rematado': 'REMATADO'
+};
+
 router.get('/trazabilidad', async (req, res) => {
   try {
     const query = `
@@ -93,7 +115,7 @@ router.get('/trazabilidad', async (req, res) => {
           SELECT 1 FROM trazabilidad_produccion tp WHERE tp.id_docena = cd.id_docena
         ) THEN true ELSE false END AS asignado,
         COALESCE(o.id_operario, NULL) AS id_operario_asignado,
-        COALESCE(o.nombre, '') AS operario_asignado,
+        CONCAT(COALESCE(o.nombre, ''), ' ', COALESCE(o.apellido, '')) AS operario_asignado,
         tp.fecha_inicio,
         tp.fecha_fin
       FROM control_docena cd
@@ -168,23 +190,85 @@ router.get('/trazabilidad/estado/:estado', async (req, res) => {
   }
 });
 
+router.get('/trazabilidad/operarios/:estado', async (req, res) => {
+
+  const estado = (req.params.estado || '').trim();
+  const dbState = stageToDbState(estado);
+
+  if (!dbState) {
+    return res.status(400).json({
+      error: 'Estado inválido: ' + estado
+    });
+  }
+
+  try {
+
+    const query = `
+      SELECT
+        d.*,
+
+        CASE
+          WHEN tp.id_operario IS NOT NULL THEN true
+          ELSE false
+        END AS asignado,
+
+        COALESCE(o.id_operario, 0)
+          AS id_operario_asignado,
+
+        COALESCE(
+          CONCAT(o.nombre, ' ', o.apellido),
+          ''
+        ) AS operario_asignado
+
+      FROM obtener_docenas_por_estado($1) d
+
+      LEFT JOIN trazabilidad_produccion tp
+        ON tp.id_docena = d.id_docena
+        AND tp.fecha_fin IS NULL
+
+      LEFT JOIN operarios o
+        ON o.id_operario = tp.id_operario
+
+      ORDER BY d.id_pedido, d.numero_docena;
+    `;
+
+    const result = await pool.query(query, [dbState]);
+
+    res.json(result.rows);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+
+  }
+
+});
+
 router.get('/operarios', async (req, res) => {
   try {
     const { rol } = req.query;
     
     if (rol) {
-      const rolesValidos = ['CORTADOR', 'APARADOR', 'ARMADOR', 'ACABADOR', 'EMPASTADOR', 'PEGADOR', 'REMATADOR'];
-      if (!rolesValidos.includes(rol.toUpperCase())) {
-        return res.status(400).json({ error: 'Rol inválido' });
-      }
+
       const result = await pool.query(
-        'SELECT id_operario, nombre, rol FROM operarios WHERE UPPER(rol) = $1 ORDER BY nombre',
-        [rol.toUpperCase()]
+        `
+        SELECT
+          id_operario,
+          nombre,
+          apellido,
+          rol
+        FROM operarios
+        WHERE UPPER(rol) = UPPER($1)
+        ORDER BY nombre
+        `,
+        [rol]
       );
-      res.json(result.rows);
-    } else {
-      const result = await pool.query('SELECT id_operario, nombre, rol FROM operarios ORDER BY nombre');
-      res.json(result.rows);
+
+      return res.json(result.rows);
     }
   } catch (err) {
     console.error('Error get operarios:', err);
@@ -263,10 +347,81 @@ router.put('/avanzar', async (req, res) => {
         [siguienteEstado, id_docena]
       );
 
+      // Verificar si todo el pedido ya terminó
+
+      const pedidoResult = await client.query(
+        `
+        SELECT dp.id_pedido
+        FROM detalle_pedido dp
+        INNER JOIN control_docena cd
+          ON dp.id_detalle = cd.id_detalle
+        WHERE cd.id_docena = $1
+        LIMIT 1
+        `,
+        [id_docena]
+      );
+
+      const idPedido = pedidoResult.rows[0].id_pedido;
+
+      // Validar si todas las docenas están acabadas
+
+      const validarFinalizado = await client.query(
+        `
+        SELECT COUNT(*) AS pendientes
+        FROM control_docena cd
+        INNER JOIN detalle_pedido dp
+          ON cd.id_detalle = dp.id_detalle
+        WHERE dp.id_pedido = $1
+        AND cd.estado_actual <> 'Doc. Acabadas'
+        `,
+        [idPedido]
+      );
+
+      if (parseInt(validarFinalizado.rows[0].pendientes) === 0) {
+
+        // Pedido COMPLETADO
+
+        await client.query(
+          `
+          UPDATE pedidos
+          SET estado = 'COMPLETADO'
+          WHERE id_pedido = $1
+          `,
+          [idPedido]
+        );
+
+        // Crear registro inicial de despacho
+
+        await client.query(
+          `
+          INSERT INTO despachos (id_pedido)
+          VALUES ($1)
+          `,
+          [idPedido]
+        );
+      }
+
+      // FINALIZAR asignacion activa actual
+
       await client.query(
-        `INSERT INTO trazabilidad_produccion (id_docena, id_operario, etapa, fecha_inicio, fecha_fin, observacion)
-         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)`,
-        [id_docena, id_operario, estadoActual, obs]
+        `
+        UPDATE trazabilidad_produccion
+        SET fecha_fin = CURRENT_TIMESTAMP
+        WHERE id_docena = $1
+        AND etapa = $2
+        AND fecha_fin IS NULL
+        `,
+        [id_docena, estadoActual]
+      );
+
+      // Registrar historial del avance
+
+      await client.query(
+        `
+        INSERT INTO trazabilidad_produccion
+        (id_docena,id_operario,etapa,fecha_inicio,fecha_fin,observacion)
+        VALUES($1,$2,$3,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,$4)`,
+        [id_docena,id_operario,estadoActual,obs]
       );
 
       await client.query('COMMIT');
@@ -348,6 +503,196 @@ router.get('/trazabilidad/completadas', async (req, res) => {
     console.error('Error get docenas completadas:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+router.get('/trazabilidad/doc-acabado', async (req, res) => {
+  try {
+
+    const query = `
+      SELECT
+        p.id_pedido,
+        cd.id_docena,
+        cd.numero_docena,
+        cd.codigo_qr,
+        cd.estado_actual,
+        m.nombre AS modelo,
+        dp.color,
+        s.descripcion AS serie,
+
+        p.total_doc_pedido,
+
+        COUNT(cd2.id_docena) FILTER (
+          WHERE cd2.estado_actual = 'Doc. Acabadas'
+        ) AS docenas_terminadas,
+
+        ROUND(
+          (
+            COUNT(cd2.id_docena) FILTER (
+              WHERE cd2.estado_actual = 'Doc. Acabadas'
+            )::numeric
+            / NULLIF(p.total_doc_pedido, 0)
+          ) * 100,
+          2
+        ) AS porcentaje_avance
+
+      FROM control_docena cd
+
+      INNER JOIN detalle_pedido dp
+        ON cd.id_detalle = dp.id_detalle
+
+      INNER JOIN pedidos p
+        ON dp.id_pedido = p.id_pedido
+
+      LEFT JOIN modelos m
+        ON dp.id_modelo = m.id_modelo
+
+      LEFT JOIN series s
+        ON dp.id_serie = s.id_serie
+
+      LEFT JOIN detalle_pedido dp2
+        ON p.id_pedido = dp2.id_pedido
+
+      LEFT JOIN control_docena cd2
+        ON dp2.id_detalle = cd2.id_detalle
+
+      WHERE cd.estado_actual = 'Doc. Acabadas'
+
+      GROUP BY
+        p.id_pedido,
+        cd.id_docena,
+        cd.numero_docena,
+        cd.codigo_qr,
+        cd.estado_actual,
+        m.nombre,
+        dp.color,
+        s.descripcion,
+        p.total_doc_pedido
+
+      ORDER BY p.id_pedido, cd.numero_docena;
+    `;
+
+    const result = await pool.query(query);
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+router.get('/trazabilidad/doc-acabado-resumen', async (req, res) => {
+  try {
+
+    const query = `
+      SELECT
+        p.id_pedido,
+
+        MAX(m.nombre) AS modelo,
+        MAX(s.descripcion) AS serie,
+
+        p.total_doc_pedido,
+
+        COUNT(cd.id_docena) AS docenas_terminadas,
+
+        ROUND(
+          (
+            COUNT(cd.id_docena)::numeric
+            / NULLIF(p.total_doc_pedido, 0)
+          ) * 100,
+          2
+        ) AS porcentaje_avance
+
+      FROM control_docena cd
+
+      INNER JOIN detalle_pedido dp
+        ON cd.id_detalle = dp.id_detalle
+
+      INNER JOIN pedidos p
+        ON dp.id_pedido = p.id_pedido
+
+      LEFT JOIN modelos m
+        ON dp.id_modelo = m.id_modelo
+
+      LEFT JOIN series s
+        ON dp.id_serie = s.id_serie
+
+      WHERE cd.estado_actual = 'Doc. Acabadas'
+
+      GROUP BY
+        p.id_pedido,
+        p.total_doc_pedido
+
+      ORDER BY p.id_pedido;
+    `;
+
+    const result = await pool.query(query);
+
+    res.json(result.rows);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+
+  }
+});
+
+router.get('/trazabilidad/doc-acabado-detalle/:id_pedido', async (req, res) => {
+
+  try {
+
+    const { id_pedido } = req.params;
+
+    const query = `
+      SELECT
+        p.id_pedido,
+        m.nombre AS modelo,
+        s.descripcion AS serie,
+        cd.numero_docena,
+        dp.color
+
+      FROM control_docena cd
+
+      INNER JOIN detalle_pedido dp
+        ON cd.id_detalle = dp.id_detalle
+
+      INNER JOIN pedidos p
+        ON dp.id_pedido = p.id_pedido
+
+      LEFT JOIN modelos m
+        ON dp.id_modelo = m.id_modelo
+
+      LEFT JOIN series s
+        ON dp.id_serie = s.id_serie
+
+      WHERE
+        p.id_pedido = $1
+        AND cd.estado_actual = 'Doc. Acabadas'
+
+      ORDER BY
+        cd.numero_docena;
+    `;
+
+    const result = await pool.query(query, [id_pedido]);
+
+    res.json(result.rows);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+
+  }
+
 });
 
 module.exports = router;

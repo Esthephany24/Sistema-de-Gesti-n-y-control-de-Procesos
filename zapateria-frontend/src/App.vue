@@ -23,6 +23,11 @@
           </router-link>
         </li>
         <li>
+          <router-link to="/despachos" active-class="active">
+            <i class="fas fa-warehouse"></i> Envios y Despachos
+          </router-link>
+        </li>
+        <li>
           <router-link to="/almacen" active-class="active">
             <i class="fas fa-warehouse"></i> Gestion Almacén
           </router-link>
@@ -55,6 +60,7 @@ const currentRouteName = computed(() => {
     case '/': return 'Gestión de Pedidos';
     case '/dashboard': return 'Monitor de Producción';
     case '/operario': return 'Control de Trazabilidad';
+    case '/despachos': return 'Envios y Despachos';
     case '/almacen': return 'Gestión de Materiales';
     default: return 'Sistema de Gestión';
   }

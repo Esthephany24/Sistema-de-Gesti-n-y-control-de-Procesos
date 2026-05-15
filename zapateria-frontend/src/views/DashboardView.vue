@@ -25,7 +25,7 @@
     </section>
 
     <section class="production-flow">
-      <h3>Estado Actual por Sección (Haz clic en una sección para ver detalles)</h3>
+      <h3>Estado Actual por Sección</h3>
       <div class="stages-grid">
         <div
           class="stage-card"
