@@ -28,7 +28,7 @@
         <input type="text" v-model="busqueda" placeholder="Buscar material..." />
       </div>
       <div class="action-buttons">
-        <button class="btn btn-in" @click="abrirModal('ingreso')">
+        <button class="btn btn-in" @click="abrirCRUD('create')">
           <i class="fas fa-plus-circle"></i> Nuevo Material
         </button>
       </div>
@@ -66,6 +66,12 @@
                 </button>
                 <button class="btn-action-tab btn-out-tab" @click="prepararMovimiento(item, 'despacho')" title="Salida a Planta">
                   <i class="fas fa-arrow-up"></i> Salida
+                </button>
+                <button class="btn-action-tab btn-edit" @click="abrirCRUD('edit', item)" title="Editar Material">
+                  <i class="fas fa-edit"></i> Editar
+                </button>
+                <button class="btn-action-tab btn-delete" @click="eliminarMaterial(item)" title="Eliminar Material">
+                  <i class="fas fa-trash"></i> Eliminar
                 </button>
               </td>
             </tr>
@@ -122,12 +128,51 @@
         </form>
       </div>
     </div>
+    
+    <!-- Modal CRUD -->
+    <div v-if="modalCRUDActivo" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ crudTipo === 'create' ? '➕ Nuevo Material' : '✏️ Editar Material' }}</h3>
+          <button @click="cerrarCRUD" class="btn-close">&times;</button>
+        </div>
+
+        <form @submit.prevent="guardarCRUD">
+          <div class="form-body">
+            <div class="form-group">
+              <label>Nombre del Material:</label>
+              <input type="text" v-model="crudForm.nombre" required />
+            </div>
+
+            <div class="form-group">
+              <label>Unidad de Medida:</label>
+              <input type="text" v-model="crudForm.unidad_medida" />
+            </div>
+
+            <div class="form-group">
+              <label>Stock Inicial:</label>
+              <input type="number" v-model="crudForm.stock_actual" min="0" step="0.01" />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" @click="cerrarCRUD" class="btn-cancel">Cancelar</button>
+            <button type="submit" class="btn-save">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Confirm Delete Modal -->
+    <ConfirmModal v-if="confirmVisible" :message="`Eliminar material: ${confirmItem?.descripcion}?`" @confirm="confirmDelete" @cancel="cancelDelete" />
   </div>
 </template>
 
 <script setup>
 import '../styles/AlmacenView.css';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import * as materialesAPI from '../services/materiales';
+import ConfirmModal from '../components/ConfirmModal.vue';
 
 const busqueda = ref('');
 const modalActivo = ref(false);
@@ -141,11 +186,27 @@ const form = ref({
   notas: ''
 });
 
-const inventario = ref([
-  { codigo: 'MAT-001', descripcion: 'Cuero Negro Liso 1.8mm', unidad: 'dm2', stockMinimo: 500, stockActual: 1200 },
-  { codigo: 'MAT-002', descripcion: 'Suela Goma T40', unidad: 'Pares', stockMinimo: 100, stockActual: 45 },
-  { codigo: 'MAT-003', descripcion: 'Pegamento PVC', unidad: 'Litros', stockMinimo: 20, stockActual: 15 },
-]);
+const inventario = ref([]);
+
+const cargarInventario = async () => {
+  try {
+    const data = await materialesAPI.listarMateriales();
+    inventario.value = data.map(m => ({
+      codigo: `MAT-${String(m.id_material).padStart(3, '0')}`,
+      id_material: m.id_material,
+      descripcion: m.nombre,
+      unidad: m.unidad_medida || '',
+      stockMinimo: 0,
+      stockActual: parseFloat(m.stock_actual || 0)
+    }));
+  } catch (err) {
+    console.error('Error cargando inventario', err);
+  }
+};
+
+onMounted(() => {
+  cargarInventario();
+});
 
 const inventarioFiltrado = computed(() => {
   if (!busqueda.value) return inventario.value;
@@ -180,7 +241,112 @@ const guardarMovimiento = () => {
     item.stockActual -= parseFloat(form.value.cantidad);
   }
   
-  alert('Movimiento registrado correctamente');
-  cerrarModal();
+  // Persistir cambio de stock en servidor
+  (async () => {
+    try {
+      const id = item.id_material;
+      await materialesAPI.actualizarMaterial(id, {
+        nombre: item.descripcion,
+        unidad_medida: item.unidad,
+        stock_actual: item.stockActual
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Movimiento registrado correctamente', type: 'success' } }));
+      cerrarModal();
+    } catch (err) {
+      console.error(err);
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Error al registrar movimiento en servidor', type: 'error' } }));
+    }
+  })();
+};
+
+// --- CRUD modal state & handlers ---
+const modalCRUDActivo = ref(false);
+const crudTipo = ref('create'); // 'create' | 'edit'
+const crudForm = ref({ nombre: '', unidad_medida: '', stock_actual: 0 });
+
+const abrirCRUD = (tipo, item = null) => {
+  crudTipo.value = tipo;
+  if (tipo === 'edit' && item) {
+    crudForm.value = {
+      nombre: item.descripcion,
+      unidad_medida: item.unidad,
+      stock_actual: item.stockActual || 0
+    };
+    materialSeleccionado.value = item;
+  } else {
+    crudForm.value = { nombre: '', unidad_medida: '', stock_actual: 0 };
+    materialSeleccionado.value = null;
+  }
+  modalCRUDActivo.value = true;
+};
+
+const cerrarCRUD = () => {
+  modalCRUDActivo.value = false;
+};
+
+const guardarCRUD = async () => {
+  try {
+    if (crudTipo.value === 'create') {
+      const nuevo = await materialesAPI.crearMaterial({
+        nombre: crudForm.value.nombre,
+        unidad_medida: crudForm.value.unidad_medida,
+        stock_actual: crudForm.value.stock_actual
+      });
+      inventario.value.unshift({
+        codigo: `MAT-${String(nuevo.id_material).padStart(3, '0')}`,
+        id_material: nuevo.id_material,
+        descripcion: nuevo.nombre,
+        unidad: nuevo.unidad_medida,
+        stockMinimo: 0,
+        stockActual: parseFloat(nuevo.stock_actual || 0)
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Material creado', type: 'success' } }));
+    } else if (crudTipo.value === 'edit' && materialSeleccionado.value) {
+      const id = materialSeleccionado.value.id_material;
+      await materialesAPI.actualizarMaterial(id, {
+        nombre: crudForm.value.nombre,
+        unidad_medida: crudForm.value.unidad_medida,
+        stock_actual: crudForm.value.stock_actual
+      });
+      materialSeleccionado.value.descripcion = crudForm.value.nombre;
+      materialSeleccionado.value.unidad = crudForm.value.unidad_medida;
+      materialSeleccionado.value.stockActual = parseFloat(crudForm.value.stock_actual || 0);
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Material actualizado', type: 'success' } }));
+    }
+    cerrarCRUD();
+    } catch (err) {
+    console.error(err);
+    window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Error al guardar material', type: 'error' } }));
+  }
+};
+
+const eliminarMaterial = async (item) => {
+  // abrir modal de confirmación
+  confirmItem.value = item;
+  confirmVisible.value = true;
+};
+
+// confirmación modal state
+const confirmVisible = ref(false);
+const confirmItem = ref(null);
+
+const confirmDelete = async () => {
+  if (!confirmItem.value) return;
+  try {
+    await materialesAPI.eliminarMaterial(confirmItem.value.id_material);
+    inventario.value = inventario.value.filter(i => i.id_material !== confirmItem.value.id_material);
+    window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Material eliminado', type: 'success' } }));
+  } catch (err) {
+    console.error(err);
+    window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Error al eliminar material', type: 'error' } }));
+  } finally {
+    confirmVisible.value = false;
+    confirmItem.value = null;
+  }
+};
+
+const cancelDelete = () => {
+  confirmVisible.value = false;
+  confirmItem.value = null;
 };
 </script>

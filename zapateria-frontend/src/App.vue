@@ -1,5 +1,6 @@
 <template>
   <div id="layout">
+    <Toast />
     <nav class="sidebar">
       <div class="logo">
         <h2>SGC Zapatería</h2>
@@ -52,6 +53,7 @@
 import './styles/App.css';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+import Toast from './components/Toast.vue';
 
 const route = useRoute();
 
