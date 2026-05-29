@@ -5,16 +5,33 @@ const pool = require('../models/db');
 // GET lista de pedidos
 router.get('/lista', async (req, res) => {
     try {
-        const query = `
+        const rawIdPedido = req.query.id_pedido;
+        const idPedido = rawIdPedido ? parseInt(rawIdPedido, 10) : null;
+
+        if (rawIdPedido && Number.isNaN(idPedido)) {
+            return res.status(400).json({ error: 'id_pedido debe ser un número válido' });
+        }
+
+        let query = `
             SELECT p.id_pedido,CONCAT(c.nombre, ' ', c.apellido) AS cliente,
             p.fecha_registro,
             p.estado,
             P.total_doc_pedido
             FROM pedidos p
-            JOIN clientes c ON p.id_cliente = c.id_cliente
+            JOIN clientes c ON p.id_cliente = c.id_cliente`;
+
+        const params = [];
+        if (idPedido) {
+            query += `
+            WHERE p.id_pedido = $1`;
+            params.push(idPedido);
+        }
+
+        query += `
             GROUP BY p.id_pedido, c.nombre, c.apellido,P.fecha_registro, p.estado, P.total_doc_pedido
             ORDER BY p.fecha_registro DESC`;
-        const result = await pool.query(query);
+
+        const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -60,20 +60,23 @@ CREATE TABLE movimiento_almacen (
 CREATE TABLE clientes (
     id_cliente SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL
+    apellido VARCHAR(100) NULL
 );
+
 
 CREATE TABLE pedidos (
     id_pedido SERIAL PRIMARY KEY,
     id_cliente INT REFERENCES clientes(id_cliente),
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     estado VARCHAR(20) DEFAULT 'PENDIENTE'
-        CHECK (estado IN ('PENDIENTE', 'EN_PROCESO', 'COMPLETADO', 'CANCELADO'))
+        CHECK (estado IN ('PENDIENTE', 'EN_PROCESO', 'COMPLETADO','EMPAQUETADO','ENVIADO','ENTREGADO','CANCELADO'))
 );
 
 ALTER TABLE pedidos
 ADD COLUMN total_doc_pedido INT DEFAULT 0
 CHECK (total_doc_pedido >= 0);
+
+
 
 CREATE TABLE detalle_pedido (
     id_detalle SERIAL PRIMARY KEY,
@@ -136,4 +139,58 @@ CREATE TABLE trazabilidad_produccion (
     fecha_inicio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_fin TIMESTAMP,
     observacion TEXT
+);
+
+
+CREATE TABLE despachos (
+    id_despacho SERIAL PRIMARY KEY,
+    id_pedido INT REFERENCES pedidos(id_pedido),
+    numero_guia VARCHAR(100) UNIQUE,
+    empresa_transporte VARCHAR(100),
+    fecha_empaquetado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_envio TIMESTAMP,
+    fecha_entrega TIMESTAMP,
+    estado_envio VARCHAR(30) DEFAULT 'PENDIENTE_GUIA'
+    CHECK (
+        estado_envio IN (
+            'PENDIENTE_GUIA',
+            'GUIA_GENERADA',
+            'PENDIENTE_ENVIO',
+            'ENVIADO',
+            'ENTREGADO'
+        )
+    ),
+
+    observaciones TEXT
+);
+
+
+
+ALTER TABLE control_docena
+DROP CONSTRAINT IF EXISTS chk_estado_actual;
+
+ALTER TABLE control_docena
+ALTER COLUMN estado_actual TYPE VARCHAR(50);
+
+ALTER TABLE control_docena
+ALTER COLUMN estado_actual DROP DEFAULT;
+
+ALTER TABLE control_docena
+ALTER COLUMN estado_actual
+SET DEFAULT 'Por cortar';
+
+ALTER TABLE control_docena
+ADD CONSTRAINT chk_estado_actual
+CHECK (
+    estado_actual IN (
+        'Por cortar',
+        'Cortado',
+        'Alistado',
+        'Aparado',
+        'Empastado',
+        'Armado',
+        'Pegado',
+        'Rematado',
+        'Doc. Acabadas'
+    )
 );

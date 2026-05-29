@@ -1,7 +1,19 @@
 <template>
   <div class="ventas-view">
     <div class="header-section">
-      <h2>Gestión de Pedidos</h2>
+      <div>
+        <h2>Gestión de Pedidos</h2>
+      </div>
+      <div class="busqueda-pedidos">
+        <input
+          type="text"
+          v-model="busquedaPedido"
+          placeholder="Buscar pedido por ID"
+          @keyup.enter="buscarPedidos"
+        />
+        <button @click="buscarPedidos" class="btn-search">Buscar</button>
+        <button @click="limpiarBusqueda" class="btn-clear" v-if="busquedaPedido">×</button>
+      </div>
       <div>
         <button @click="abrirModal" class="btn-nuevo">+ REGISTRAR PEDIDO</button>
         <button @click="abrirModalCliente" class="btn-cliente">+ REGISTRAR CLIENTE</button>
@@ -130,6 +142,7 @@ const mostrarModal = ref(false);
 const mostrarModalCliente = ref(false);
 const mostrarExito = ref(false); // Nueva variable para el pop-up de exito[]
 const listaPedidos = ref([]);
+const busquedaPedido = ref('');
 const clientes = ref([]);
 const modelos = ref([]);
 const series = ref([]);
@@ -149,10 +162,10 @@ const abrirModalCliente = () => { mostrarModalCliente.value = true; };
 const cerrarModalCliente = () => { mostrarModalCliente.value = false; };
 const cerrarExito = () => { mostrarExito.value = false; };
 
-const cargarDatos = async () => {
+const cargarDatos = async (idPedido = '') => {
   try {
     const [resP, resC, resM, resS] = await Promise.all([
-      axios.get('http://localhost:3000/api/pedidos/lista'),
+      axios.get('http://localhost:3000/api/pedidos/lista', { params: { id_pedido: idPedido } }),
       axios.get('http://localhost:3000/api/clientes'),
       axios.get('http://localhost:3000/api/modelos'),
       axios.get('http://localhost:3000/api/series')
@@ -162,6 +175,28 @@ const cargarDatos = async () => {
     modelos.value = resM.data;
     series.value = resS.data;
   } catch (error) { console.error("Error cargando datos", error); }
+};
+
+const buscarPedidos = async () => {
+  if (!busquedaPedido.value || !busquedaPedido.value.toString().trim()) {
+    cargarDatos();
+    return;
+  }
+
+  try {
+    const res = await axios.get('http://localhost:3000/api/pedidos/lista', {
+      params: { id_pedido: busquedaPedido.value }
+    });
+    listaPedidos.value = res.data;
+  } catch (error) {
+    console.error('Error buscando pedido', error);
+    alert('No se pudo buscar el pedido. Verifique el ID e intente de nuevo.');
+  }
+};
+
+const limpiarBusqueda = () => {
+  busquedaPedido.value = '';
+  cargarDatos();
 };
 
 const agregarFilaColor = () => { nuevoPedido.value.detalles.push({ color: '', cantidad_docenas: 1 }); };

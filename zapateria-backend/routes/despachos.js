@@ -3,10 +3,41 @@ const router = express.Router();
 const pool = require('../models/db');
 
 router.get('/', async (req, res) => {
-
   try {
+    const { q, numero_guia, id_pedido } = req.query;
+    const conditions = [];
+    const params = [];
 
-    const result = await pool.query(`
+    if (q) {
+      const queryText = q.toString().trim();
+      const orConditions = [];
+      const pedidoMatch = queryText.match(/^\s*(?:P[-_\s]*)?(\d+)\s*$/i);
+      if (pedidoMatch) {
+        const idPedido = parseInt(pedidoMatch[1], 10);
+        if (!Number.isNaN(idPedido)) {
+          orConditions.push(`p.id_pedido = $${params.length + 1}`);
+          params.push(idPedido);
+        }
+      }
+      orConditions.push(`d.numero_guia ILIKE $${params.length + 1}`);
+      params.push(`%${queryText}%`);
+      conditions.push(`(${orConditions.join(' OR ')})`);
+    }
+
+    if (numero_guia) {
+      conditions.push(`d.numero_guia ILIKE $${params.length + 1}`);
+      params.push(`%${numero_guia.toString().trim()}%`);
+    }
+
+    if (id_pedido) {
+      const pedidoId = parseInt(id_pedido.toString().trim(), 10);
+      if (!Number.isNaN(pedidoId)) {
+        conditions.push(`p.id_pedido = $${params.length + 1}`);
+        params.push(pedidoId);
+      }
+    }
+
+    let sql = `
       SELECT
         d.*,
         CONCAT(c.nombre, ' ', c.apellido) AS cliente
@@ -14,22 +45,22 @@ router.get('/', async (req, res) => {
       INNER JOIN pedidos p
         ON d.id_pedido = p.id_pedido
       LEFT JOIN clientes c
-        ON p.id_cliente = c.id_cliente
-      ORDER BY d.id_despacho DESC
-    `);
+        ON p.id_cliente = c.id_cliente`;
 
+    if (conditions.length) {
+      sql += `\n      WHERE ${conditions.join(' OR ')}`;
+    }
+
+    sql += `\n      ORDER BY d.id_despacho DESC`;
+
+    const result = await pool.query(sql, params);
     res.json(result.rows);
-
   } catch (err) {
-
     console.error(err);
-
     res.status(500).json({
       error: err.message
     });
-
   }
-
 });
 
 router.put('/:id/guia', async (req, res) => {

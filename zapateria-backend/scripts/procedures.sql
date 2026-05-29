@@ -1,3 +1,5 @@
+
+
 CREATE OR REPLACE FUNCTION obtener_todas_docenas()
 RETURNS TABLE (
     id_docena INT,
@@ -67,8 +69,6 @@ BEGIN
     ORDER BY cd.numero_docena;
 END;
 $$ LANGUAGE plpgsql;
-
-
 
 CREATE OR REPLACE FUNCTION obtener_docenas_operario_por_estado(
     estado_filtro VARCHAR
@@ -145,3 +145,7 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql;
+
+
+
+
