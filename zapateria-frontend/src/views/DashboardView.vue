@@ -1,45 +1,44 @@
 <template>
   <div class="dashboard-container">
     <section class="kpi-grid">
-      <div class="kpi-card primary">
+      <div class="kpi-card primary clickable" @click="goToDetalle('produccion')" title="Ver detalles de producción">
         <div class="kpi-icon"><i class="fas fa-shoe-prints"></i></div>
         <div class="kpi-data">
           <h3>Total en Producción</h3>
           <p class="kpi-number">{{ totalDocenasActivas }} docenas</p>
+          <div class="detail-action"><i class="fas fa-eye"></i> Ver detalles</div>
         </div>
       </div>
-      <div class="kpi-card success">
+      <div class="kpi-card success clickable" @click="goToDetalle('terminados-hoy')" title="Ver docenas terminadas hoy">
         <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
         <div class="kpi-data">
           <h3>Terminados Hoy</h3>
           <p class="kpi-number">{{ docenasTerminadasHoy }} docenas</p>
+          <div class="detail-action"><i class="fas fa-eye"></i> Ver detalles</div>
         </div>
       </div>
-      <div class="kpi-card info">
+      <div class="kpi-card info clickable" @click="goToDetalle('terminados-semana')" title="Ver docenas terminadas esta semana">
         <div class="kpi-icon"><i class="fas fa-calendar-week"></i></div>
         <div class="kpi-data">
           <h3>Total Docenas Acabadas (Semana)</h3>
           <p class="kpi-number">{{ docenasTerminadasSemana }} docenas</p>
+          <div class="detail-action"><i class="fas fa-eye"></i> Ver detalles</div>
         </div>
       </div>
-      <div class="kpi-card secondary">
+      <div class="kpi-card secondary clickable" @click="goToDetalle('historial')" title="Ver historial de docenas acabadas">
         <div class="kpi-icon"><i class="fas fa-history"></i></div>
         <div class="kpi-data">
           <h3>Historial Docenas Acabadas</h3>
           <p class="kpi-number">{{ docenasTerminadasTotal }} docenas</p>
+          <div class="detail-action"><i class="fas fa-eye"></i> Ver detalles</div>
         </div>
       </div>
-      <div class="kpi-card warning">
+      <div class="kpi-card warning clickable" @click="goToDetalle('stock')" title="Ver alertas de stock">
         <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <div class="kpi-data">
           <h3>Alertas de Stock</h3>
           <p class="kpi-number">{{ lowStockMaterials.length }} insumos bajos</p>
-          <ul class="stock-list">
-            <li v-for="material in lowStockMaterials.slice(0, 3)" :key="material.id_material">
-              {{ material.nombre }} ({{ material.stock_actual }}/{{ material.stock_minimo }} {{ material.unidad || 'u' }})
-            </li>
-            <li v-if="lowStockMaterials.length > 3">+{{ lowStockMaterials.length - 3 }} más</li>
-          </ul>
+          <div class="detail-action"><i class="fas fa-eye"></i> Ver alertas</div>
         </div>
       </div>
     </section>
@@ -110,14 +109,19 @@
 <script setup>
 import '../styles/DashboardView.css';
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import * as materialesAPI from '../services/materiales';
 
+const router = useRouter();
 const seccionDetalle = ref(null);
 const detalleProduccion = ref([]);
 const docenasTerminadasSemana = ref(0);
 const docenasTerminadasTotal = ref(0);
 const lowStockMaterials = ref([]);
 const stockAlertError = ref(null);
+const goToDetalle = (section) => {
+  router.push(`/dashboard/detalle/${section}`);
+};
 
 const stateMap = {
   POR_CORTAR: 'Por cortar',
@@ -206,28 +210,7 @@ const fetchLowStockMaterials = async () => {
     lowStockMaterials.value = [];
   }
 };
-/*
-const fetchDetallePorSeccion = async (seccion) => {
-  try {
-    const estadoDb = stateMap[seccion.key];
-    const response = await fetch(`http://localhost:3000/api/produccion/trazabilidad/operarios/${estadoDb}`);
-    if (!response.ok) throw new Error('No se pudieron cargar los detalles');
-    const data = await response.json();
 
-    detalleProduccion.value = data.map((item) => ({
-      seccion: seccion.nombre,
-      lote: `P-${String(item.id_pedido).padStart(3, '0')}`,
-      color: item.color || 'N/D',
-      serie: item.serie || 'N/D',
-      docenas: 1,
-      operario: item.operario_asignado || 'Sin asignar',
-      fechaInicio: formatDate(item.fecha_inicio)
-    }));
-  } catch (err) {
-    detalleProduccion.value = [];
-    error.value = err.message || 'Error al cargar los detalles';
-  }
-};*/
 const fetchDetallePorSeccion = async (seccion) => {
 
   try {
@@ -314,7 +297,11 @@ onMounted(() => {
 .kpi-card.info { border-left-color: #1abc9c; }
 .kpi-card.secondary { border-left-color: #9b59b6; }
 .kpi-card.warning { border-left-color: #f1c40f; }
+.kpi-card.clickable { cursor: pointer; }
+.kpi-card.clickable:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,0.12); }
 .kpi-icon { font-size: 2.5rem; margin-right: 20px; color: #7f8c8d; }
+.detail-action { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-weight: 700; color: #2980b9; }
+.detail-action i { font-size: 1rem; }
 .stock-list {
   margin: 12px 0 0;
   padding-left: 18px;

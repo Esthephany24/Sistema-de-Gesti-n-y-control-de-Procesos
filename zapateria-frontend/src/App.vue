@@ -67,12 +67,13 @@ const currentRouteName = computed(() => {
     switch(true) {
       case route.path.startsWith('/catalogos'): return 'Catálogos';
       case route.path === '/catalogos': return 'Catálogos';
-    case '/': return 'Gestión de Pedidos';
-    case '/dashboard': return 'Monitor de Producción';
-    case '/operario': return 'Control de Trazabilidad';
-    case '/despachos': return 'Envios y Despachos';
-    case '/almacen': return 'Gestión de Materiales';
-    default: return 'Sistema de Gestión';
+      case route.path.startsWith('/dashboard/detalle'): return 'Detalle Dashboard';
+      case route.path === '/': return 'Gestión de Pedidos';
+      case route.path === '/dashboard': return 'Monitor de Producción';
+      case route.path === '/operario': return 'Control de Trazabilidad';
+      case route.path === '/despachos': return 'Envios y Despachos';
+      case route.path === '/almacen': return 'Gestión de Materiales';
+      default: return 'Sistema de Gestión';
   }
 });
 </script>

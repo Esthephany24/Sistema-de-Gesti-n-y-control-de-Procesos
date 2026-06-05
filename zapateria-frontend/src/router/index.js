@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import VentasView from '../views/VentasView.vue';
 import DashboardView from '../views/DashboardView.vue';
+import DashboardDetailView from '../views/DashboardDetailView.vue';
 import OperarioView from '../views/OperarioView.vue';
 import AlmacenView from '../views/AlmacenView.vue';
 import DespachosView from '../views/DespachosView.vue';
@@ -12,6 +13,7 @@ import CatalogosView from '../views/CatalogosView.vue';
 const routes = [
   { path: '/', component: VentasView },
   { path: '/dashboard', component: DashboardView },
+  { path: '/dashboard/detalle/:section', component: DashboardDetailView },
   { path: '/operario', component: OperarioView },
   { path: '/almacen', component: AlmacenView },
   { path: '/catalogos', component: CatalogosView },

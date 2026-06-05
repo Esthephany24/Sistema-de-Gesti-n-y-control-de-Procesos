@@ -799,24 +799,39 @@ router.get('/dashboard/summary', async (req, res) => {
   try {
     const query = `
       SELECT
-        COUNT(*) FILTER (
-          WHERE cd.estado_actual = 'Doc. Acabadas'
-            AND tp.etapa = 'Rematado'
-            AND tp.fecha_fin::date = CURRENT_DATE
+        COALESCE(
+          (
+            SELECT COUNT(DISTINCT tp.id_docena)
+            FROM trazabilidad_produccion tp
+            INNER JOIN control_docena cd ON cd.id_docena = tp.id_docena
+            WHERE cd.estado_actual = 'Doc. Acabadas'
+              AND tp.etapa = 'Rematado'
+              AND tp.observacion = 'Finalizado Rematado'
+              AND tp.fecha_fin::date = CURRENT_DATE
+          ), 0
         ) AS terminados_hoy,
-        COUNT(*) FILTER (
-          WHERE cd.estado_actual = 'Doc. Acabadas'
-            AND tp.etapa = 'Rematado'
-            AND tp.fecha_fin::date BETWEEN date_trunc('week', CURRENT_DATE)::date
-              AND (date_trunc('week', CURRENT_DATE)::date + INTERVAL '5 days')
+        COALESCE(
+          (
+            SELECT COUNT(DISTINCT tp.id_docena)
+            FROM trazabilidad_produccion tp
+            INNER JOIN control_docena cd ON cd.id_docena = tp.id_docena
+            WHERE cd.estado_actual = 'Doc. Acabadas'
+              AND tp.etapa = 'Rematado'
+              AND tp.observacion = 'Finalizado Rematado'
+              AND tp.fecha_fin::date BETWEEN date_trunc('week', CURRENT_DATE)::date
+                AND (date_trunc('week', CURRENT_DATE)::date + INTERVAL '5 days')
+          ), 0
         ) AS terminados_semana,
-        COUNT(*) FILTER (
-          WHERE cd.estado_actual = 'Doc. Acabadas'
+        COALESCE(
+          (
+            SELECT COUNT(DISTINCT tp.id_docena)
+            FROM trazabilidad_produccion tp
+            INNER JOIN control_docena cd ON cd.id_docena = tp.id_docena
+            WHERE cd.estado_actual = 'Doc. Acabadas'
+              AND tp.etapa = 'Rematado'
+              AND tp.observacion = 'Finalizado Rematado'
+          ), 0
         ) AS terminados_total
-      FROM control_docena cd
-      LEFT JOIN trazabilidad_produccion tp
-        ON tp.id_docena = cd.id_docena
-        AND tp.etapa = 'Rematado'
     `;
 
     const result = await pool.query(query);
@@ -827,6 +842,47 @@ router.get('/dashboard/summary', async (req, res) => {
     });
   } catch (err) {
     console.error('Error get dashboard summary:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/dashboard/completados', async (req, res) => {
+  try {
+    const { period = 'total' } = req.query;
+    let dateClause = '';
+
+    if (period === 'today') {
+      dateClause = `AND tp.fecha_fin::date = CURRENT_DATE`;
+    } else if (period === 'week') {
+      dateClause = `AND tp.fecha_fin::date BETWEEN date_trunc('week', CURRENT_DATE)::date AND (date_trunc('week', CURRENT_DATE)::date + INTERVAL '5 days')`;
+    }
+
+    const query = `
+      SELECT DISTINCT ON (tp.id_docena)
+        tp.id_docena,
+        p.id_pedido,
+        CONCAT('P-', LPAD(p.id_pedido::text, 3, '0')) AS lote,
+        dp.color,
+        COALESCE(s.descripcion, 'N/D') AS serie,
+        COALESCE(o.nombre, '') || ' ' || COALESCE(o.apellido, '') AS operario,
+        tp.fecha_fin
+      FROM trazabilidad_produccion tp
+      INNER JOIN control_docena cd ON cd.id_docena = tp.id_docena
+      INNER JOIN detalle_pedido dp ON dp.id_detalle = cd.id_detalle
+      INNER JOIN pedidos p ON p.id_pedido = dp.id_pedido
+      LEFT JOIN series s ON s.id_serie = dp.id_serie
+      LEFT JOIN operarios o ON o.id_operario = tp.id_operario
+      WHERE cd.estado_actual = 'Doc. Acabadas'
+        AND tp.etapa = 'Rematado'
+        AND tp.observacion = 'Finalizado Rematado'
+        ${dateClause}
+      ORDER BY tp.id_docena, tp.fecha_fin DESC;
+    `;
+
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error get dashboard completados:', err);
     res.status(500).json({ error: err.message });
   }
 });
