@@ -24,13 +24,14 @@
         </button>
       </div>
 
-      <div class="work-queue">
+      <div :class="['work-queue', sectionCssClass]">
         <h4>Docenas en cola para {{ seccionSeleccionadaLabel }}</h4>
         <div class="table-responsive">
-          <table class="terminal-table">
-            <thead>
-              <tr>
-                <th>Pedido</th>
+          <div class="scrollable-table">
+            <table class="terminal-table">
+              <thead>
+                <tr>
+                  <th>Pedido</th>
                 <th>Modelo</th>
                 <th v-if="seccionSeleccionada !== 'DOC_ACABADO'">Docena</th>
                 <th v-if="seccionSeleccionada !== 'DOC_ACABADO'">Color</th>
@@ -147,6 +148,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -484,6 +486,11 @@ const isDocAcabadoSection = computed(() => seccionSeleccionada.value === 'DOC_AC
 
 const seccionSeleccionadaLabel = computed(() => {
   return stageLabels[seccionSeleccionada.value] || seccionSeleccionada.value;
+});
+
+const sectionCssClass = computed(() => {
+  if (!seccionSeleccionada.value) return '';
+  return seccionSeleccionada.value.toLowerCase().replace(/_/g, '-');
 });
 
 const registrarAvance = async (docena) => {

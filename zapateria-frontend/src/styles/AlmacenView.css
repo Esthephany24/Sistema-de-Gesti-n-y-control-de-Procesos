@@ -12,6 +12,13 @@
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th { text-align: left; padding: 15px; background: rgba(255,255,255,0.06); border-bottom: 2px solid rgba(255,255,255,0.08); color: #cbd5e1; }
 .data-table td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.08); color: #e2e8f0; }
+.table-responsive { display: block; max-height: 60vh; overflow: auto; }
+.data-table thead th { position: sticky; top: 0; z-index: 5; background: rgba(255,255,255,0.06); }
+
+.status-critico { color: #fff; background: #b91c1c; padding: 6px 10px; border-radius: 6px; font-weight: 700; }
+.status-minimo { color: #000; background: #f59e0b; padding: 6px 10px; border-radius: 6px; font-weight: 700; }
+.status-optimo { color: #fff; background: #059669; padding: 6px 10px; border-radius: 6px; font-weight: 700; }
+.status-maximo { color: #fff; background: #1e40af; padding: 6px 10px; border-radius: 6px; font-weight: 700; }
 .actions-cell { display: flex; gap: 8px; }
 .btn-action-tab { border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; }
 .btn-in-tab { background-color: #2563eb; color: white; }

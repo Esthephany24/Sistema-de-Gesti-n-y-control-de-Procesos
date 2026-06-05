@@ -33,6 +33,11 @@
             <i class="fas fa-warehouse"></i> Gestion Almacén
           </router-link>
         </li>
+        <li>
+          <router-link to="/catalogos" active-class="active">
+            <i class="fas fa-book"></i> Catálogos
+          </router-link>
+        </li>
       </ul>
     </nav>
 
@@ -59,7 +64,9 @@ const route = useRoute();
 
 // Cambia el título del header según la pantalla actual
 const currentRouteName = computed(() => {
-  switch(route.path) {
+    switch(true) {
+      case route.path.startsWith('/catalogos'): return 'Catálogos';
+      case route.path === '/catalogos': return 'Catálogos';
     case '/': return 'Gestión de Pedidos';
     case '/dashboard': return 'Monitor de Producción';
     case '/operario': return 'Control de Trazabilidad';

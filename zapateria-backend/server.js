@@ -14,6 +14,7 @@ const routesSeries = require('./routes/series');
 const routesPedidos = require('./routes/pedidos');
 const routesProduccion = require('./routes/produccion');
 const despachosRoutes = require('./routes/despachos');
+const routesCatalogos = require('./routes/catalogos');
 
 // --- REGISTRAR RUTAS ---
 app.use('/api/clientes', routesClientes);
@@ -25,6 +26,7 @@ app.use('/api/produccion', routesProduccion);
 console.log('Produccion routes mounted');
 app.use('/api/despachos', despachosRoutes);
 app.use('/api/materiales', routesMateriales);
+app.use('/api/catalogos', routesCatalogos);
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Servidor de Zapatería corriendo en puerto ${PORT}`));

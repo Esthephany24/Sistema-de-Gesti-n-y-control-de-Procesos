@@ -194,3 +194,7 @@ CHECK (
         'Doc. Acabadas'
     )
 );
+
+
+ALTER TABLE materiales
+ADD COLUMN stock_minimo DECIMAL(12,2) NOT NULL DEFAULT 0;

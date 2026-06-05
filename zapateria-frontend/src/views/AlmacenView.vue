@@ -56,9 +56,7 @@
               </td>
               <td>{{ item.stockMinimo }}</td>
               <td>
-                <span :class="item.stockActual > item.stockMinimo ? 'badge badge-success' : 'badge badge-danger'">
-                  {{ item.stockActual > item.stockMinimo ? 'OK' : 'Bajo' }}
-                </span>
+                <span :class="statusClass(item)">{{ statusLabel(item) }}</span>
               </td>
               <td class="actions-cell">
                 <button class="btn-action-tab btn-in-tab" @click="prepararMovimiento(item, 'ingreso')" title="Entrada de Stock">
@@ -151,7 +149,11 @@
 
             <div class="form-group">
               <label>Stock Inicial:</label>
-              <input type="number" v-model="crudForm.stock_actual" min="0" step="0.01" />
+              <input type="number" v-model.number="crudForm.stock_actual" min="0" step="0.01" />
+            </div>
+            <div class="form-group">
+              <label>Stock Mínimo:</label>
+              <input type="number" v-model.number="crudForm.stock_minimo" min="0" step="0.01" />
             </div>
           </div>
 
@@ -196,13 +198,36 @@ const cargarInventario = async () => {
       id_material: m.id_material,
       descripcion: m.nombre,
       unidad: m.unidad_medida || '',
-      stockMinimo: 0,
+      stockMinimo: parseFloat(m.stock_minimo || 0),
       stockActual: parseFloat(m.stock_actual || 0)
     }));
   } catch (err) {
     console.error('Error cargando inventario', err);
   }
 };
+
+// Estado del material: 'critico' | 'minimo' | 'optimo' | 'maximo'
+// Reglas:
+// - CRÍTICO: stock < stock_minimo
+// - MÍNIMO: stock == stock_minimo
+// - MÁXIMO: stock > 200 (umbral fijo solicitado)
+// - ÓPTIMO: resto de casos (stock > stock_minimo y <= 200)
+const statusKey = (item) => {
+  const s = parseFloat(item.stockActual || 0);
+  const m = parseFloat(item.stockMinimo || 0);
+  if (s > 200) return 'maximo';
+  if (s < m) return 'critico';
+  if (s === m) return 'minimo';
+  return 'optimo';
+};
+
+const statusLabel = (item) => {
+  const k = statusKey(item);
+  const labels = { critico: 'CRÍTICO', minimo: 'MÍNIMO', optimo: 'ÓPTIMO', maximo: 'MÁXIMO' };
+  return labels[k] || k;
+};
+
+const statusClass = (item) => `status-${statusKey(item)}`;
 
 onMounted(() => {
   cargarInventario();
@@ -248,7 +273,8 @@ const guardarMovimiento = () => {
       await materialesAPI.actualizarMaterial(id, {
         nombre: item.descripcion,
         unidad_medida: item.unidad,
-        stock_actual: item.stockActual
+        stock_actual: item.stockActual,
+        stock_minimo: item.stockMinimo ?? 0
       });
       window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Movimiento registrado correctamente', type: 'success' } }));
       cerrarModal();
@@ -262,7 +288,7 @@ const guardarMovimiento = () => {
 // --- CRUD modal state & handlers ---
 const modalCRUDActivo = ref(false);
 const crudTipo = ref('create'); // 'create' | 'edit'
-const crudForm = ref({ nombre: '', unidad_medida: '', stock_actual: 0 });
+const crudForm = ref({ nombre: '', unidad_medida: '', stock_actual: 0, stock_minimo: 0 });
 
 const abrirCRUD = (tipo, item = null) => {
   crudTipo.value = tipo;
@@ -270,18 +296,21 @@ const abrirCRUD = (tipo, item = null) => {
     crudForm.value = {
       nombre: item.descripcion,
       unidad_medida: item.unidad,
-      stock_actual: item.stockActual || 0
+      stock_actual: item.stockActual || 0,
+      stock_minimo: item.stockMinimo || 0
     };
     materialSeleccionado.value = item;
   } else {
-    crudForm.value = { nombre: '', unidad_medida: '', stock_actual: 0 };
-    materialSeleccionado.value = null;
+    crudForm.value = { nombre: '', unidad_medida: '', stock_actual: 0, stock_minimo: 0 };
   }
   modalCRUDActivo.value = true;
 };
 
 const cerrarCRUD = () => {
   modalCRUDActivo.value = false;
+  crudTipo.value = 'create';
+  crudForm.value = { nombre: '', unidad_medida: '', stock_actual: 0, stock_minimo: 0 };
+  materialSeleccionado.value = null;
 };
 
 const guardarCRUD = async () => {
@@ -290,14 +319,15 @@ const guardarCRUD = async () => {
       const nuevo = await materialesAPI.crearMaterial({
         nombre: crudForm.value.nombre,
         unidad_medida: crudForm.value.unidad_medida,
-        stock_actual: crudForm.value.stock_actual
+        stock_actual: crudForm.value.stock_actual ?? 0,
+        stock_minimo: crudForm.value.stock_minimo ?? 0
       });
       inventario.value.unshift({
         codigo: `MAT-${String(nuevo.id_material).padStart(3, '0')}`,
         id_material: nuevo.id_material,
         descripcion: nuevo.nombre,
         unidad: nuevo.unidad_medida,
-        stockMinimo: 0,
+        stockMinimo: parseFloat(nuevo.stock_minimo || 0),
         stockActual: parseFloat(nuevo.stock_actual || 0)
       });
       window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Material creado', type: 'success' } }));
@@ -306,15 +336,17 @@ const guardarCRUD = async () => {
       await materialesAPI.actualizarMaterial(id, {
         nombre: crudForm.value.nombre,
         unidad_medida: crudForm.value.unidad_medida,
-        stock_actual: crudForm.value.stock_actual
+        stock_actual: crudForm.value.stock_actual ?? 0,
+        stock_minimo: crudForm.value.stock_minimo ?? 0
       });
       materialSeleccionado.value.descripcion = crudForm.value.nombre;
       materialSeleccionado.value.unidad = crudForm.value.unidad_medida;
       materialSeleccionado.value.stockActual = parseFloat(crudForm.value.stock_actual || 0);
+      materialSeleccionado.value.stockMinimo = parseFloat(crudForm.value.stock_minimo || 0);
       window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Material actualizado', type: 'success' } }));
     }
     cerrarCRUD();
-    } catch (err) {
+  } catch (err) {
     console.error(err);
     window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Error al guardar material', type: 'error' } }));
   }

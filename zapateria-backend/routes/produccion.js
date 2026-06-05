@@ -795,4 +795,40 @@ router.get('/dashboard/detalle/:estado', async (req, res) => {
 
 });
 
+router.get('/dashboard/summary', async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        COUNT(*) FILTER (
+          WHERE cd.estado_actual = 'Doc. Acabadas'
+            AND tp.etapa = 'Rematado'
+            AND tp.fecha_fin::date = CURRENT_DATE
+        ) AS terminados_hoy,
+        COUNT(*) FILTER (
+          WHERE cd.estado_actual = 'Doc. Acabadas'
+            AND tp.etapa = 'Rematado'
+            AND tp.fecha_fin::date BETWEEN date_trunc('week', CURRENT_DATE)::date
+              AND (date_trunc('week', CURRENT_DATE)::date + INTERVAL '5 days')
+        ) AS terminados_semana,
+        COUNT(*) FILTER (
+          WHERE cd.estado_actual = 'Doc. Acabadas'
+        ) AS terminados_total
+      FROM control_docena cd
+      LEFT JOIN trazabilidad_produccion tp
+        ON tp.id_docena = cd.id_docena
+        AND tp.etapa = 'Rematado'
+    `;
+
+    const result = await pool.query(query);
+    res.json(result.rows[0] || {
+      terminados_hoy: 0,
+      terminados_semana: 0,
+      terminados_total: 0
+    });
+  } catch (err) {
+    console.error('Error get dashboard summary:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

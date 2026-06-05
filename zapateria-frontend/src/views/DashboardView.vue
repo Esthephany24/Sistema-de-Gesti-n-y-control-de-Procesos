@@ -15,11 +15,31 @@
           <p class="kpi-number">{{ docenasTerminadasHoy }} docenas</p>
         </div>
       </div>
+      <div class="kpi-card info">
+        <div class="kpi-icon"><i class="fas fa-calendar-week"></i></div>
+        <div class="kpi-data">
+          <h3>Total Docenas Acabadas (Semana)</h3>
+          <p class="kpi-number">{{ docenasTerminadasSemana }} docenas</p>
+        </div>
+      </div>
+      <div class="kpi-card secondary">
+        <div class="kpi-icon"><i class="fas fa-history"></i></div>
+        <div class="kpi-data">
+          <h3>Historial Docenas Acabadas</h3>
+          <p class="kpi-number">{{ docenasTerminadasTotal }} docenas</p>
+        </div>
+      </div>
       <div class="kpi-card warning">
         <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <div class="kpi-data">
           <h3>Alertas de Stock</h3>
-          <p class="kpi-number">2 Insumos bajos</p>
+          <p class="kpi-number">{{ lowStockMaterials.length }} insumos bajos</p>
+          <ul class="stock-list">
+            <li v-for="material in lowStockMaterials.slice(0, 3)" :key="material.id_material">
+              {{ material.nombre }} ({{ material.stock_actual }}/{{ material.stock_minimo }} {{ material.unidad || 'u' }})
+            </li>
+            <li v-if="lowStockMaterials.length > 3">+{{ lowStockMaterials.length - 3 }} más</li>
+          </ul>
         </div>
       </div>
     </section>
@@ -90,9 +110,14 @@
 <script setup>
 import '../styles/DashboardView.css';
 import { ref, computed, onMounted } from 'vue';
+import * as materialesAPI from '../services/materiales';
 
 const seccionDetalle = ref(null);
 const detalleProduccion = ref([]);
+const docenasTerminadasSemana = ref(0);
+const docenasTerminadasTotal = ref(0);
+const lowStockMaterials = ref([]);
+const stockAlertError = ref(null);
 
 const stateMap = {
   POR_CORTAR: 'Por cortar',
@@ -148,13 +173,37 @@ const fetchSecciones = async () => {
         docenas: found ? Number(found.count) : 0
       };
     });
-
-    const terminado = data.find((item) => item.stage === 'DOC_ACABADO');
-    docenasTerminadasHoy.value = terminado ? Number(terminado.count) : 0;
   } catch (err) {
     error.value = err.message || 'Error al cargar las secciones';
   } finally {
     loading.value = false;
+  }
+};
+
+const fetchDashboardSummary = async () => {
+  try {
+    const response = await fetch('http://localhost:3000/api/produccion/dashboard/summary');
+    if (!response.ok) throw new Error('No se pudo cargar el resumen del dashboard');
+    const data = await response.json();
+    docenasTerminadasHoy.value = Number(data.terminados_hoy || data.terminadosHoy || 0);
+    docenasTerminadasSemana.value = Number(data.terminados_semana || data.terminadosSemana || 0);
+    docenasTerminadasTotal.value = Number(data.terminados_total || data.terminadosTotal || 0);
+  } catch (err) {
+    error.value = err.message || 'Error al cargar el resumen del dashboard';
+  }
+};
+
+const fetchLowStockMaterials = async () => {
+  try {
+    const materials = await materialesAPI.listarMateriales();
+    lowStockMaterials.value = (materials || []).filter((m) => {
+      const stockActual = parseFloat(m.stock_actual || 0);
+      const stockMinimo = parseFloat(m.stock_minimo || 0);
+      return stockActual <= stockMinimo;
+    });
+  } catch (err) {
+    stockAlertError.value = err.message || 'No se pudieron cargar las alertas de stock';
+    lowStockMaterials.value = [];
   }
 };
 /*
@@ -243,7 +292,13 @@ const formatDate = (dateString) => {
 
 onMounted(() => {
   fetchSecciones();
-  setInterval(fetchSecciones, 5000);
+  fetchDashboardSummary();
+  fetchLowStockMaterials();
+  setInterval(() => {
+    fetchSecciones();
+    fetchDashboardSummary();
+    fetchLowStockMaterials();
+  }, 5000);
 });
 </script>
 
@@ -256,8 +311,20 @@ onMounted(() => {
 .kpi-card { display: flex; align-items: center; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #ccc; }
 .kpi-card.primary { border-left-color: #3498db; }
 .kpi-card.success { border-left-color: #2ecc71; }
+.kpi-card.info { border-left-color: #1abc9c; }
+.kpi-card.secondary { border-left-color: #9b59b6; }
 .kpi-card.warning { border-left-color: #f1c40f; }
 .kpi-icon { font-size: 2.5rem; margin-right: 20px; color: #7f8c8d; }
+.stock-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: #2f3e50;
+}
+.stock-list li {
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
 .kpi-data h3 { margin: 0; font-size: 0.9rem; color: #95a5a6; text-transform: uppercase; }
 .kpi-number { margin: 8px 0 0; font-size: 1.8rem; font-weight: bold; color: #2c3e50; }
 .production-flow h3 { color: #2c3e50; margin-bottom: 20px; }
