@@ -38,9 +38,9 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in movimientos" :key="item.id_movimiento">
-            <td>{{ formatearFecha(item.fecha) }}</td>
-            <td>{{ item.tipo_movimiento }}</td>
+          <tr v-for="(item, idx) in movimientos" :key="item.id_movimiento || idx">
+            <td>{{ item.fecha ? formatearFecha(item.fecha) : '' }}</td>
+            <td>{{ item.tipo || item.tipo_movimiento || item.fuente }}</td>
             <td>{{ item.cantidad }}</td>
             <td>{{ item.referencia }}</td>
           </tr>

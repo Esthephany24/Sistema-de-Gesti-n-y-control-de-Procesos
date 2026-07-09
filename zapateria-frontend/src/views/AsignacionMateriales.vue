@@ -13,6 +13,9 @@
         <label>Estado</label>
         <input v-model="filtroEstado" placeholder="Buscar estado" />
       </div>
+      <div class="filter-item" style="display:flex;align-items:flex-end;justify-content:center;">
+        <button class="btn" @click="cargarAsignaciones">Buscar</button>
+      </div>
     </section>
 
     <section class="table-wrapper">

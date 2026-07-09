@@ -152,17 +152,78 @@ router.get('/kardex/:idMaterial', async (req, res) => {
       return res.status(404).json({ error: 'Material no encontrado' });
     }
 
+    // Movimientos de almacén (entradas/salidas)
     const movimientosRes = await pool.query(
       `SELECT id_movimiento, tipo_movimiento, cantidad, fecha, referencia
        FROM movimiento_almacen
-       WHERE id_material = $1
-       ORDER BY fecha DESC, id_movimiento DESC`,
+       WHERE id_material = $1`,
       [idMaterial]
     );
 
+    // Reservas relacionadas al material (no siempre tienen fecha propia; usamos fecha_registro del pedido para contexto)
+    const reservasRes = await pool.query(
+      `SELECT r.id_reserva, r.id_pedido, r.cantidad_reservada, r.cantidad_entregada, r.estado, p.fecha_registro
+       FROM reserva_materiales r
+       LEFT JOIN pedidos p ON p.id_pedido = r.id_pedido
+       WHERE r.id_material = $1`,
+      [idMaterial]
+    );
+
+    // Consumos asociados (tienen fecha)
+    const consumoRes = await pool.query(
+      `SELECT c.id_consumo, c.id_reserva, c.cantidad, c.fecha, r.id_pedido
+       FROM consumo_materiales c
+       INNER JOIN reserva_materiales r ON r.id_reserva = c.id_reserva
+       WHERE r.id_material = $1`,
+      [idMaterial]
+    );
+
+    const movimientos = [];
+
+    // Map movimientos de almacen
+    for (const m of movimientosRes.rows) {
+      movimientos.push({
+        fuente: 'MOVIMIENTO',
+        tipo: m.tipo_movimiento,
+        cantidad: m.cantidad,
+        fecha: m.fecha,
+        referencia: m.referencia
+      });
+    }
+
+    // Map reservas
+    for (const r of reservasRes.rows) {
+      movimientos.push({
+        fuente: 'RESERVA',
+        tipo: r.estado || 'RESERVA',
+        cantidad: r.cantidad_reservada,
+        fecha: r.fecha_registro || null,
+        referencia: `Reserva pedido ${r.id_pedido} - ${r.estado}`
+      });
+    }
+
+    // Map consumos
+    for (const c of consumoRes.rows) {
+      movimientos.push({
+        fuente: 'CONSUMO',
+        tipo: 'CONSUMO',
+        cantidad: c.cantidad,
+        fecha: c.fecha,
+        referencia: `Consumo reserva ${c.id_reserva} (pedido ${c.id_pedido})`
+      });
+    }
+
+    // Ordenar por fecha DESC (fechas null al final)
+    movimientos.sort((a, b) => {
+      if (!a.fecha && !b.fecha) return 0;
+      if (!a.fecha) return 1;
+      if (!b.fecha) return -1;
+      return new Date(b.fecha) - new Date(a.fecha);
+    });
+
     res.json({
       material: materialRes.rows[0],
-      movimientos: movimientosRes.rows
+      movimientos
     });
   } catch (err) {
     console.error(err);

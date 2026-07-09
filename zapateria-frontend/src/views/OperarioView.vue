@@ -683,15 +683,75 @@ const descargarQr = () => {
   const svgEl = document.querySelector('.qr-preview svg');
   if (!svgEl) return;
 
-  const serializer = new XMLSerializer();
-  const svgString = serializer.serializeToString(svgEl);
-  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-  const url = URL.createObjectURL(svgBlob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `qr-docena-${docenaSeleccionada.value.id_docena || 'docena'}.png`;
-  link.click();
-  URL.revokeObjectURL(url);
+  try {
+    const serializer = new XMLSerializer();
+    let svgString = serializer.serializeToString(svgEl);
+
+    // Ensure XML namespace is present
+    if (!svgString.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+      svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    const svgData = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+    const img = new Image();
+
+    img.onload = () => {
+      const width = img.width || svgEl.viewBox?.baseVal?.width || svgEl.getBoundingClientRect().width || 300;
+      const height = img.height || svgEl.viewBox?.baseVal?.height || svgEl.getBoundingClientRect().height || 300;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      // Optional: white background for PNG
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          // fallback to downloading svg
+          const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `qr-docena-${docenaSeleccionada.value.id_docena || 'docena'}.svg`;
+          link.click();
+          URL.revokeObjectURL(url);
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `qr-docena-${docenaSeleccionada.value.id_docena || 'docena'}.png`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    };
+
+    img.onerror = () => {
+      // Fallback: download raw svg
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `qr-docena-${docenaSeleccionada.value.id_docena || 'docena'}.svg`;
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+
+    img.src = svgData;
+  } catch (err) {
+    console.error('Error al generar PNG desde SVG:', err);
+    // fallback
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgEl);
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `qr-docena-${docenaSeleccionada.value.id_docena || 'docena'}.svg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 };
 
 const registrarAvance = async (docena) => {
