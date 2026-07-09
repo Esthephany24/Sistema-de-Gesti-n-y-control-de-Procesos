@@ -190,6 +190,69 @@ router.get('/trazabilidad/estado/:estado', async (req, res) => {
   }
 });
 
+router.get('/trazabilidad/buscar', async (req, res) => {
+  try {
+    const { id_docena, codigo_qr, estado } = req.query;
+    const trimmedId = id_docena ? String(id_docena).trim() : '';
+    const trimmedQr = codigo_qr ? String(codigo_qr).trim() : '';
+    const trimmedEstado = estado ? String(estado).trim() : '';
+
+    if (!trimmedId && !trimmedQr) {
+      return res.status(400).json({ error: 'Debes enviar id_docena o codigo_qr' });
+    }
+
+    const params = [];
+    let query = `
+      SELECT
+        cd.id_docena,
+        cd.numero_docena,
+        cd.codigo_qr,
+        cd.estado_actual,
+        p.id_pedido,
+        COALESCE(m.nombre, 'N/D') AS modelo,
+        COALESCE(dp.color, '') AS color,
+        COALESCE(s.descripcion, 'N/D') AS serie,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM trazabilidad_produccion tp WHERE tp.id_docena = cd.id_docena AND tp.fecha_fin IS NULL
+        ) THEN true ELSE false END AS asignado,
+        COALESCE(o.id_operario, NULL) AS id_operario_asignado,
+        CONCAT(COALESCE(o.nombre, ''), ' ', COALESCE(o.apellido, '')) AS operario_asignado
+      FROM control_docena cd
+      LEFT JOIN detalle_pedido dp ON cd.id_detalle = dp.id_detalle
+      LEFT JOIN pedidos p ON dp.id_pedido = p.id_pedido
+      LEFT JOIN modelos m ON dp.id_modelo = m.id_modelo
+      LEFT JOIN series s ON dp.id_serie = s.id_serie
+      LEFT JOIN trazabilidad_produccion tp ON tp.id_docena = cd.id_docena AND tp.fecha_fin IS NULL
+      LEFT JOIN operarios o ON tp.id_operario = o.id_operario
+      WHERE 1=1
+    `;
+
+    if (trimmedId) {
+      params.push(parseInt(trimmedId, 10));
+      query += ` AND cd.id_docena = $${params.length}`;
+    }
+
+    if (trimmedQr) {
+      params.push(trimmedQr);
+      query += ` AND cd.codigo_qr = $${params.length}`;
+    }
+
+    if (trimmedEstado) {
+      const dbState = stageToDbState(trimmedEstado) || trimmedEstado;
+      params.push(dbState);
+      query += ` AND cd.estado_actual = $${params.length}`;
+    }
+
+    query += ` ORDER BY p.id_pedido, cd.numero_docena;`;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error buscar docena:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/trazabilidad/operarios/:estado', async (req, res) => {
 
   const estado = (req.params.estado || '').trim();

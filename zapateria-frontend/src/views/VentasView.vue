@@ -29,6 +29,7 @@
             <th>Fecha</th>
             <th>Total Docenas</th>
             <th>Estado</th>
+            <th>Detalle</th>
           </tr>
         </thead>
         <tbody>
@@ -42,6 +43,9 @@
                 class="estado-badge" :class="ped.estado?.toLowerCase()">
                 {{ ped.estado }}
               </span>
+            </td>
+            <td>
+              <button class="btn-eye" @click="verDetallePedido(ped)" title="Ver detalle del pedido">👁</button>
             </td>
           </tr>
         </tbody>
@@ -122,6 +126,49 @@
       </div>
     </div>
 
+    <div v-if="mostrarDetallePedido" class="modal-overlay">
+      <div class="modal-content detail-modal">
+        <header class="modal-header">
+          <h3>Detalle del pedido</h3>
+          <button @click="cerrarDetallePedido" class="btn-close">&times;</button>
+        </header>
+
+        <div v-if="cargandoDetalle" class="detalle-loading">Cargando detalle...</div>
+
+        <div v-else-if="pedidoDetalle?.pedido" class="detalle-content">
+          <div class="detalle-summary">
+            <p><strong>ID Pedido :</strong> #{{ pedidoDetalle.pedido.id_pedido }}</p>
+            <p><strong>Cliente: </strong> {{ pedidoDetalle.pedido.cliente }}</p>
+            <p><strong>Fecha: </strong> {{ new Date(pedidoDetalle.pedido.fecha_registro).toLocaleDateString() }}</p>
+            <p><strong>Estado: </strong> {{ pedidoDetalle.pedido.estado }}</p>
+            <div class="detalle-general">
+              <div class="detalle-general-item"><span>Modelo: </span><strong>{{ pedidoDetalle.pedido.modelo || 'N/D' }}</strong></div>
+              <div class="detalle-general-item"><span>Serie: </span><strong>{{ pedidoDetalle.pedido.serie || 'N/D' }}</strong></div>
+            </div>
+            <p><strong>Total Docenas: </strong> {{ pedidoDetalle.pedido.total_doc_pedido || 0 }}</p>
+          </div>
+
+          <h4>Detalle de líneas</h4>
+          <table class="detalle-table">
+            <thead>
+              <tr>
+                <th>Color </th>
+                <th>Docenas </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in detallesAgrupados" :key="item.color">
+                <td>{{ item.color || 'N/D' }}</td>
+                <td>{{ item.cantidad_docenas }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-else class="detalle-empty">No se encontró información del pedido.</div>
+      </div>
+    </div>
+
     <div v-if="mostrarExito" class="modal-overlay">
       <div class="modal-content success-modal">
         <div class="success-icon">✓</div>
@@ -141,6 +188,10 @@ import './VentasView.css';
 const mostrarModal = ref(false);
 const mostrarModalCliente = ref(false);
 const mostrarExito = ref(false); // Nueva variable para el pop-up de exito[]
+const mostrarDetallePedido = ref(false);
+const cargandoDetalle = ref(false);
+const pedidoDetalle = ref({ pedido: null, detalles: [] });
+const detallesAgrupados = ref([]);
 const listaPedidos = ref([]);
 const busquedaPedido = ref('');
 const clientes = ref([]);
@@ -161,6 +212,7 @@ const cerrarModal = () => { mostrarModal.value = false; };
 const abrirModalCliente = () => { mostrarModalCliente.value = true; };
 const cerrarModalCliente = () => { mostrarModalCliente.value = false; };
 const cerrarExito = () => { mostrarExito.value = false; };
+const cerrarDetallePedido = () => { mostrarDetallePedido.value = false; pedidoDetalle.value = { pedido: null, detalles: [] }; detallesAgrupados.value = []; };
 
 const cargarDatos = async (idPedido = '') => {
   try {
@@ -197,6 +249,33 @@ const buscarPedidos = async () => {
 const limpiarBusqueda = () => {
   busquedaPedido.value = '';
   cargarDatos();
+};
+
+const verDetallePedido = async (pedido) => {
+  mostrarDetallePedido.value = true;
+  cargandoDetalle.value = true;
+  pedidoDetalle.value = { pedido: null, detalles: [] };
+
+  try {
+    const res = await axios.get(`http://localhost:3000/api/pedidos/detalle/${pedido.id_pedido}`);
+    pedidoDetalle.value = res.data;
+    const grouped = new Map();
+    (res.data.detalles || []).forEach((item) => {
+      const color = item.color || 'N/D';
+      const cantidad = Number(item.cantidad_docenas) || 0;
+      if (!grouped.has(color)) {
+        grouped.set(color, { color, cantidad_docenas: 0 });
+      }
+      grouped.get(color).cantidad_docenas += cantidad;
+    });
+    detallesAgrupados.value = Array.from(grouped.values());
+  } catch (error) {
+    console.error('Error cargando detalle del pedido', error);
+    pedidoDetalle.value = { pedido: null, detalles: [] };
+    detallesAgrupados.value = [];
+  } finally {
+    cargandoDetalle.value = false;
+  }
 };
 
 const agregarFilaColor = () => { nuevoPedido.value.detalles.push({ color: '', cantidad_docenas: 1 }); };

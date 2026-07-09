@@ -14,7 +14,7 @@
           <tr v-for="m in items" :key="m.id_modelo">
             <td>{{ m.id_modelo }}</td>
             <td>{{ m.nombre }}</td>
-            <td>
+            <td class="actions-cell">
                 <button @click="edit(m)" class="btn">Editar</button>
                 <button @click="confirmDelete(m.id_modelo)" class="btn del">Borrar</button>
               </td>
@@ -87,6 +87,7 @@ onMounted(load);
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table thead th { position: sticky; top: 0; background: #f3f4f6; font-weight: 600; padding: 8px; text-align: left; }
 .data-table td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
+.actions-cell { display: flex; gap: 10px; align-items: center; }
 .modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); z-index: 1000; }
 .modal-content { background: #fff; padding: 20px; border-radius: 8px; width: 400px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
 .modal-content header { margin-bottom: 16px; }

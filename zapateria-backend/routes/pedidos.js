@@ -38,6 +38,81 @@ router.get('/lista', async (req, res) => {
     }
 });
 
+// GET detalle de un pedido
+router.get('/detalle/:id_pedido', async (req, res) => {
+    try {
+        const idPedido = parseInt(req.params.id_pedido, 10);
+
+        if (Number.isNaN(idPedido)) {
+            return res.status(400).json({ error: 'id_pedido debe ser un número válido' });
+        }
+
+        const headerQuery = `
+            SELECT
+                p.id_pedido,
+                p.fecha_registro,
+                p.estado,
+                p.total_doc_pedido,
+                CONCAT(c.nombre, ' ', c.apellido) AS cliente
+            FROM pedidos p
+            LEFT JOIN clientes c ON p.id_cliente = c.id_cliente
+            WHERE p.id_pedido = $1
+            LIMIT 1
+        `;
+
+        const headerResult = await pool.query(headerQuery, [idPedido]);
+
+        const modelSeriesQuery = `
+            SELECT
+                m.nombre AS modelo,
+                s.descripcion AS serie
+            FROM detalle_pedido dp
+            LEFT JOIN modelos m ON dp.id_modelo = m.id_modelo
+            LEFT JOIN series s ON dp.id_serie = s.id_serie
+            WHERE dp.id_pedido = $1
+            LIMIT 1
+        `;
+
+        const modelSeriesResult = await pool.query(modelSeriesQuery, [idPedido]);
+
+        if (headerResult.rowCount === 0) {
+            return res.status(404).json({ error: 'Pedido no encontrado' });
+        }
+
+        const pedido = {
+            id_pedido: headerResult.rows[0].id_pedido,
+            cliente: headerResult.rows[0].cliente,
+            fecha_registro: headerResult.rows[0].fecha_registro,
+            estado: headerResult.rows[0].estado,
+            total_doc_pedido: headerResult.rows[0].total_doc_pedido,
+            modelo: modelSeriesResult.rows[0]?.modelo || null,
+            serie: modelSeriesResult.rows[0]?.serie || null
+        };
+
+        const detailsQuery = `
+            SELECT
+                dp.id_detalle,
+                dp.color,
+                dp.cantidad_docenas
+            FROM detalle_pedido dp
+            WHERE dp.id_pedido = $1
+            ORDER BY dp.id_detalle
+        `;
+
+        const detailsResult = await pool.query(detailsQuery, [idPedido]);
+
+        const detalles = detailsResult.rows.map((row) => ({
+            id_detalle: row.id_detalle,
+            color: row.color,
+            cantidad_docenas: row.cantidad_docenas
+        }));
+
+        res.json({ pedido, detalles });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // POST crear nuevo pedido
 router.post('/', async (req, res) => {
     const { id_cliente, id_modelo, id_serie, detalles } = req.body;

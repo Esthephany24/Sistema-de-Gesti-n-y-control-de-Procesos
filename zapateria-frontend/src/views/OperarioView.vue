@@ -26,13 +26,45 @@
 
       <div :class="['work-queue', sectionCssClass]">
         <h4>Docenas en cola para {{ seccionSeleccionadaLabel }}</h4>
+
+        <div v-if="seccionSeleccionada && seccionSeleccionada !== 'DOC_ACABADO'" class="search-panel">
+          <div class="search-controls">
+            <select v-model="searchMode" class="search-select">
+              <option value="id_docena">Buscar por ID docena</option>
+              <option value="codigo_qr">Buscar por código QR</option>
+            </select>
+            <input
+              v-model="searchTerm"
+              :placeholder="searchMode === 'id_docena' ? 'Ej. 123' : 'Escanea o escribe el código QR'"
+              class="search-input"
+              @keyup.enter="buscarDocena"
+            />
+            <button class="btn-search" @click="buscarDocena" :disabled="isSearching">
+              {{ isSearching ? 'Buscando...' : 'Buscar' }}
+            </button>
+            <button v-if="searchMode === 'codigo_qr'" class="btn-scan" @click="alternarEscanerQr">
+              {{ qrScannerActive ? 'Detener escáner' : 'Escanear QR' }}
+            </button>
+            <button class="btn-reset" @click="restaurarLista" :disabled="isSearching">
+              Ver todos
+            </button>
+          </div>
+
+          <div v-if="qrScannerActive" class="qr-scanner-card">
+            <video ref="videoRef" class="qr-video" autoplay playsinline muted></video>
+            <p class="qr-hint">Apunta la cámara al código QR para buscar la docena.</p>
+          </div>
+          <p v-if="searchMessage" class="search-message">{{ searchMessage }}</p>
+        </div>
+
         <div class="table-responsive">
           <div class="scrollable-table">
             <table class="terminal-table">
               <thead>
-                <tr>
-                  <th>Pedido</th>
+              <tr>
+                <th>Pedido</th>
                 <th>Modelo</th>
+                <th>ID Docena</th>
                 <th v-if="seccionSeleccionada !== 'DOC_ACABADO'">Docena</th>
                 <th v-if="seccionSeleccionada !== 'DOC_ACABADO'">Color</th>
                 <th v-if="seccionSeleccionada === 'DOC_ACABADO'">Serie</th>
@@ -48,6 +80,7 @@
               <tr v-for="docena in docenas" :key="docena.id_docena">
                 <td class="fw-bold">P-{{ String(docena.id_pedido).padStart(3, '0') }}</td>
                 <td>{{ docena.modelo }}</td>
+                <td>{{ docena.id_docena || '—' }}</td>
                 <!--
                 <td><span class="badge-qty">{{ docena.numero_docena }}</span></td>
                 <td>
@@ -144,7 +177,7 @@
               </td>
               </tr>
               <tr v-if="docenas.length === 0">
-                <td colspan="5" class="empty-state">No hay docenas activas para esta estación.</td>
+                <td :colspan="seccionSeleccionada === 'DOC_ACABADO' ? 5 : 6" class="empty-state">No hay docenas activas para esta estación.</td>
               </tr>
             </tbody>
           </table>
@@ -218,6 +251,12 @@
           </div>
           <div class="modal-body">
             <p><strong>Pedido:</strong> P-{{ String(docenaSeleccionada?.id_pedido).padStart(3, '0') }} <strong>Docena:</strong> {{ docenaSeleccionada?.numero_docena }}</p>
+            <div v-if="qrPreviewValue" class="qr-assignment-card">
+              <div class="qr-preview">
+                <QRCodeVue :value="qrPreviewValue" :size="180" level="H" render-as="svg" />
+              </div>
+              <button class="btn-download-qr" @click="descargarQr">Descargar imagen</button>
+            </div>
             <div class="assign-list">
               <label v-for="op in operariosDisponibles" :key="op.id_operario" class="assign-item">
                 <input type="radio" :value="op.id_operario" v-model="selectedOperarioId" />
@@ -240,7 +279,8 @@
 
 <script setup>
 import '../styles/OperarioView.css';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import QRCodeVue from 'qrcode.vue';
 
 const operarioActual = ref('Esthephany');
 const seccionSeleccionada = ref(null);
@@ -256,6 +296,15 @@ const modalDetalle = ref(false);
 const detallePedido = ref([]);
 const pedidoDetalle = ref(null);
 const isSubmitting = ref(false);
+const searchMode = ref('id_docena');
+const searchTerm = ref('');
+const searchMessage = ref('');
+const isSearching = ref(false);
+const qrScannerActive = ref(false);
+const videoRef = ref(null);
+let qrStream = null;
+let qrDetector = null;
+let qrScanFrameRequested = false;
 
 const stageLabels = {
   POR_CORTAR: 'POR CORTAR',
@@ -470,6 +519,8 @@ const fetchDocenasCompletadas = async () => {
 const seleccionarSeccion = async (estado) => {
   seccionSeleccionada.value = estado;
   mensajes.value = '';
+  searchTerm.value = '';
+  searchMessage.value = '';
   await fetchDocenas(estado);
   if (estado === 'DOC_ACABADO') {
     await fetchDocenasCompletadas();
@@ -477,12 +528,22 @@ const seleccionarSeccion = async (estado) => {
 };
 
 const cambiarSeccion = () => {
+  detenerEscanerQr();
   seccionSeleccionada.value = null;
   docenas.value = [];
   mensajes.value = '';
+  searchTerm.value = '';
+  searchMessage.value = '';
 };
 
 const isDocAcabadoSection = computed(() => seccionSeleccionada.value === 'DOC_ACABADO');
+
+const qrPreviewValue = computed(() => {
+  if (!docenaSeleccionada.value) return '';
+  if (docenaSeleccionada.value.codigo_qr) return String(docenaSeleccionada.value.codigo_qr);
+  if (docenaSeleccionada.value.id_docena) return `DOCENA-${docenaSeleccionada.value.id_docena}`;
+  return '';
+});
 
 const seccionSeleccionadaLabel = computed(() => {
   return stageLabels[seccionSeleccionada.value] || seccionSeleccionada.value;
@@ -492,6 +553,146 @@ const sectionCssClass = computed(() => {
   if (!seccionSeleccionada.value) return '';
   return seccionSeleccionada.value.toLowerCase().replace(/_/g, '-');
 });
+
+const buscarDocena = async () => {
+  const termino = searchTerm.value.trim();
+  if (!termino) {
+    searchMessage.value = 'Escribe un ID de docena o un código QR para buscar.';
+    return;
+  }
+
+  isSearching.value = true;
+  searchMessage.value = '';
+  mensajes.value = '';
+
+  try {
+    const params = new URLSearchParams();
+    if (searchMode.value === 'id_docena') {
+      params.set('id_docena', termino);
+    } else {
+      params.set('codigo_qr', termino);
+    }
+
+    const estadoBusqueda = stationStateFetch[seccionSeleccionada.value] || seccionSeleccionada.value;
+    if (estadoBusqueda) {
+      params.set('estado', estadoBusqueda);
+    }
+
+    const response = await fetch(`http://localhost:3000/api/produccion/trazabilidad/buscar?${params.toString()}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'No se encontró la docena');
+    }
+
+    docenas.value = Array.isArray(data) ? data : [data];
+    searchMessage.value = docenas.value.length
+      ? `Se encontró ${docenas.value.length} resultado(s).`
+      : 'No se encontró ninguna docena con esos datos.';
+  } catch (err) {
+    docenas.value = [];
+    searchMessage.value = err.message || 'No se pudo buscar la docena.';
+    console.error(err);
+  } finally {
+    isSearching.value = false;
+  }
+};
+
+const restaurarLista = async () => {
+  searchTerm.value = '';
+  searchMessage.value = '';
+  await fetchDocenas(seccionSeleccionada.value);
+};
+
+const detenerEscanerQr = () => {
+  qrScannerActive.value = false;
+  qrScanFrameRequested = false;
+  if (qrStream) {
+    qrStream.getTracks().forEach((track) => track.stop());
+    qrStream = null;
+  }
+  if (videoRef.value) {
+    videoRef.value.srcObject = null;
+  }
+};
+
+const escanearCodigoQr = async () => {
+  if (!('BarcodeDetector' in window)) {
+    searchMessage.value = 'Tu navegador no soporta escaneo de QR desde la cámara.';
+    return;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    searchMessage.value = 'La cámara no está disponible en este navegador.';
+    return;
+  }
+
+  try {
+    qrScannerActive.value = true;
+    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    if (videoRef.value) {
+      videoRef.value.srcObject = qrStream;
+      await videoRef.value.play();
+    }
+
+    qrDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
+    qrScanFrameRequested = true;
+    const escanearFrame = async () => {
+      if (!qrScanFrameRequested || !qrScannerActive.value || !videoRef.value || !qrDetector) return;
+      try {
+        const barcodes = await qrDetector.detect(videoRef.value);
+        if (barcodes.length) {
+          const valor = barcodes[0].rawValue;
+          if (valor) {
+            searchMode.value = 'codigo_qr';
+            searchTerm.value = valor;
+            detenerEscanerQr();
+            await buscarDocena();
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Error al leer QR:', err);
+      }
+
+      if (qrScannerActive.value) {
+        requestAnimationFrame(escanearFrame);
+      }
+    };
+
+    escanearFrame();
+  } catch (err) {
+    searchMessage.value = 'No se pudo abrir la cámara para leer el QR.';
+    qrScannerActive.value = false;
+    console.error(err);
+  }
+};
+
+const alternarEscanerQr = async () => {
+  if (qrScannerActive.value) {
+    detenerEscanerQr();
+    return;
+  }
+
+  await escanearCodigoQr();
+};
+
+const descargarQr = () => {
+  if (!docenaSeleccionada.value || !qrPreviewValue.value) return;
+
+  const svgEl = document.querySelector('.qr-preview svg');
+  if (!svgEl) return;
+
+  const serializer = new XMLSerializer();
+  const svgString = serializer.serializeToString(svgEl);
+  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `qr-docena-${docenaSeleccionada.value.id_docena || 'docena'}.png`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
 
 const registrarAvance = async (docena) => {
   // If the docena has no assigned operario, open the assign modal first
@@ -541,6 +742,10 @@ const registrarAvance = async (docena) => {
 onMounted(async () => {
   await fetchSecciones();
   await fetchDocenasCompletadas();
+});
+
+onBeforeUnmount(() => {
+  detenerEscanerQr();
 });
 </script>
 

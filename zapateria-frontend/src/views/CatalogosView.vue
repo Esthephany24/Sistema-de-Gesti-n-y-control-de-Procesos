@@ -48,7 +48,7 @@
               <tr v-for="s in series" :key="s.id_serie">
                 <td>{{ s.id_serie }}</td>
                 <td>{{ s.descripcion }}</td>
-                <td>
+                <td class="actions-cell">
                   <button @click="abrirModalSeries(s)" class="btn">Editar</button>
                   <button @click="confirmarEliminacionSerie(s.id_serie)" class="btn del">Borrar</button>
                 </td>
@@ -93,7 +93,7 @@
               <tr v-for="m in modelos" :key="m.id_modelo">
                 <td>{{ m.id_modelo }}</td>
                 <td>{{ m.nombre }}</td>
-                <td>
+                <td class="actions-cell">
                   <button @click="abrirModalModelos(m)" class="btn">Editar</button>
                   <button @click="confirmarEliminacionModelo(m.id_modelo)" class="btn del">Borrar</button>
                 </td>
@@ -140,7 +140,7 @@
                 <td>{{ c.id_cliente }}</td>
                 <td>{{ c.nombre }}</td>
                 <td>{{ c.apellido }}</td>
-                <td>
+                <td class="actions-cell">
                   <button @click="abrirModalClientes(c)" class="btn">Editar</button>
                   <button @click="confirmarEliminacionCliente(c.id_cliente)" class="btn del">Borrar</button>
                 </td>
@@ -585,7 +585,11 @@ onMounted(cargarTodos);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   color: #e5e7eb;
 }
-
+.actions-cell {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
 .data-table tr:hover {
   background: rgba(255, 255, 255, 0.03);
 }

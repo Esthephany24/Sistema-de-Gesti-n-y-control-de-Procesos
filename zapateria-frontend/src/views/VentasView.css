@@ -357,6 +357,90 @@
   line-height: 75px;
 }
 
+.detalle-content {
+  display: grid;
+  gap: 14px;
+}
+
+.detalle-summary {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.03);
+}
+
+.detalle-summary p,
+.detalle-summary .detalle-general-item {
+  color: #f8fafc;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.detalle-general {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.detalle-general-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.detalle-general-item span {
+  color: #c7d2fe;
+}
+
+.detalle-general-item strong {
+  color: #f8fafc;
+}
+
+.detalle-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.detalle-table th,
+.detalle-table td {
+  padding: 12px 14px;
+  text-align: left;
+  color: #f8fafc;
+}
+
+.detalle-table th {
+  background: rgba(255,255,255,0.06);
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.detalle-table tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.detalle-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.detalle-table tbody tr:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.detalle-loading,
+.detalle-empty {
+  color: #f8fafc;
+  padding: 20px;
+  text-align: center;
+}
+
 /* BADGES ESTADO */
 
 .estado-badge {
