@@ -198,3 +198,99 @@ CHECK (
 
 ALTER TABLE materiales
 ADD COLUMN stock_minimo DECIMAL(12,2) NOT NULL DEFAULT 0;
+
+---ALMACEN MP MOV PEIDO
+
+CREATE TABLE reserva_materiales(
+
+    id_reserva SERIAL PRIMARY KEY,
+
+    id_pedido INT REFERENCES pedidos(id_pedido),
+
+    id_material INT REFERENCES materiales(id_material),
+
+    cantidad_reservada DECIMAL(12,2),
+
+    cantidad_entregada DECIMAL(12,2) DEFAULT 0,
+
+    estado VARCHAR(20)
+);
+
+
+CREATE TABLE consumo_materiales(
+
+    id_consumo SERIAL PRIMARY KEY,
+
+    id_reserva INT REFERENCES reserva_materiales,
+
+    cantidad DECIMAL(12,2),
+
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE pedido_material(
+
+id SERIAL PRIMARY KEY,
+
+id_pedido INT,
+
+id_material INT,
+
+cantidad_necesaria DECIMAL,
+
+cantidad_reservada DECIMAL,
+
+cantidad_faltante DECIMAL,
+
+estado VARCHAR(30)
+
+);
+
+
+ALTER TABLE materiales
+ADD COLUMN stock_reservado DECIMAL(12,2) NOT NULL DEFAULT 0;
+
+
+ALTER TABLE pedido_material
+ADD CONSTRAINT fk_pedido_material_pedido
+FOREIGN KEY (id_pedido)
+REFERENCES pedidos(id_pedido);
+
+ALTER TABLE pedido_material
+ADD CONSTRAINT fk_pedido_material_material
+FOREIGN KEY (id_material)
+REFERENCES materiales(id_material);
+
+CREATE TABLE colores(
+
+id_color SERIAL PRIMARY KEY,
+
+nombre VARCHAR(50)
+
+);
+
+CREATE TABLE material_color(
+
+id_material_color SERIAL PRIMARY KEY,
+
+id_material INT REFERENCES materiales,
+
+id_color INT REFERENCES colores,
+
+stock_actual DECIMAL,
+
+stock_reservado DECIMAL,
+
+stock_minimo DECIMAL
+
+);
+
+CREATE TABLE notificaciones (
+    id_notificacion SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    mensaje TEXT,
+    tipo VARCHAR(50),
+    leido BOOLEAN DEFAULT FALSE,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

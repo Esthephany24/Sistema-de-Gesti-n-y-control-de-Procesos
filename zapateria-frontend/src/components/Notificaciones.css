@@ -1,0 +1,111 @@
+.notificaciones-page {
+  padding: 24px;
+}
+
+.notificaciones-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.notificaciones-header h2 {
+  margin: 0;
+}
+
+.btn-marcar-todas,
+.btn-marcar-leida {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.btn-marcar-todas {
+  background: #2563eb;
+  color: white;
+}
+
+.notificaciones-list {
+  display: grid;
+  gap: 16px;
+}
+
+.notificacion-card {
+  padding: 18px;
+  border-radius: 16px;
+  background: #1f2937;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.notificacion-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.notificacion-card h3 {
+  margin: 0 0 8px;
+  color: #f8fafc;
+}
+
+.notificacion-card p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.notificacion-fecha {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.notificacion-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.notificacion-tipo,
+.notificacion-estado {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.notificacion-success {
+  background: rgba(22, 163, 74, 0.16);
+  border-color: rgba(22, 163, 74, 0.32);
+}
+
+.notificacion-warning {
+  background: rgba(234, 179, 8, 0.16);
+  border-color: rgba(234, 179, 8, 0.32);
+}
+
+.notificacion-error {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.notificacion-tipo {
+  background: rgba(255,255,255,0.08);
+  color: #f8fafc;
+}
+
+.notificacion-estado.leida {
+  color: #22c55e;
+}
+
+.notificacion-estado.no-leida {
+  color: #fbbf24;
+}
+
+.btn-marcar-leida {
+  margin-top: 14px;
+  background: #2563eb;
+  color: white;
+}

@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../models/db');
+const notificationService = require('../models/notificationService');
+const { consumirReservasPedido } = require('../models/inventario');
 
 console.log('Loading produccion routes...');
 
@@ -516,6 +518,17 @@ router.put('/avanzar', async (req, res) => {
     if (!dbState) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Estado_actual inválido: ' + estado_actual });
+    }
+
+    if (dbState === 'Por cortar') {
+      const consumedCount = await consumirReservasPedido(client, id_pedido);
+      if (consumedCount > 0) {
+        await notificationService.crearNotificacion(
+          'Materiales entregados a Producción',
+          `Se entregaron los materiales del pedido #${id_pedido} a Producción.`,
+          'SUCCESS'
+        );
+      }
     }
 
     const selectRes = await client.query(

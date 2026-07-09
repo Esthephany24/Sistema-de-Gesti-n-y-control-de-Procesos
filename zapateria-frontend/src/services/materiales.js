@@ -24,8 +24,38 @@ export async function actualizarMaterial(id, payload) {
   return res.data;
 }
 
+export async function obtenerResumenDashboard() {
+  const res = await api.get('/materiales/dashboard/summary');
+  return res.data;
+}
+
+export async function obtenerStockCritico() {
+  const res = await api.get('/materiales/dashboard/stock-critico');
+  return res.data;
+}
+
+export async function obtenerMasUsado() {
+  const res = await api.get('/materiales/dashboard/mas-usado');
+  return res.data;
+}
+
+export async function obtenerConsumoMensual() {
+  const res = await api.get('/materiales/dashboard/consumo-mensual');
+  return res.data;
+}
+
+export async function obtenerKardex(idMaterial) {
+  const res = await api.get(`/materiales/kardex/${idMaterial}`);
+  return res.data;
+}
+
 export async function eliminarMaterial(id) {
   const res = await api.delete(`/materiales/${id}`);
+  return res.data;
+}
+
+export async function listarAsignaciones() {
+  const res = await api.get('/materiales/asignaciones');
   return res.data;
 }
 
@@ -34,5 +64,11 @@ export default {
   obtenerMaterial,
   crearMaterial,
   actualizarMaterial,
-  eliminarMaterial
+  eliminarMaterial,
+  listarAsignaciones,
+  obtenerResumenDashboard,
+  obtenerStockCritico,
+  obtenerMasUsado,
+  obtenerConsumoMensual,
+  obtenerKardex
 };

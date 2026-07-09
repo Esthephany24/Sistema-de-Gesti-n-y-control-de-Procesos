@@ -9,6 +9,10 @@ import ClientesView from '../views/ClientesView.vue';
 import ModelosView from '../views/ModelosView.vue';
 import SeriesView from '../views/SeriesView.vue';
 import CatalogosView from '../views/CatalogosView.vue';
+import NotificacionesView from '../views/NotificacionesView.vue';
+import AsignacionMateriales from '../views/AsignacionMateriales.vue';
+import AlmacenDashboardView from '../views/AlmacenDashboardView.vue';
+import KardexView from '../views/KardexView.vue';
 
 const routes = [
   { path: '/', component: VentasView },
@@ -16,7 +20,11 @@ const routes = [
   { path: '/dashboard/detalle/:section', component: DashboardDetailView },
   { path: '/operario', component: OperarioView },
   { path: '/almacen', component: AlmacenView },
+  { path: '/almacen-dashboard', component: AlmacenDashboardView },
+  { path: '/kardex', component: KardexView },
   { path: '/catalogos', component: CatalogosView },
+  { path: '/notificaciones', component: NotificacionesView },
+  { path: '/asignacion-materiales', component: AsignacionMateriales },
   // legacy top-level routes kept for compatibility
   { path: '/clientes', component: ClientesView },
   { path: '/modelos', component: ModelosView },
