@@ -217,10 +217,10 @@ const cerrarDetallePedido = () => { mostrarDetallePedido.value = false; pedidoDe
 const cargarDatos = async (idPedido = '') => {
   try {
     const [resP, resC, resM, resS] = await Promise.all([
-      axios.get('http://localhost:3000/api/pedidos/lista', { params: { id_pedido: idPedido } }),
-      axios.get('http://localhost:3000/api/clientes'),
-      axios.get('http://localhost:3000/api/modelos'),
-      axios.get('http://localhost:3000/api/series')
+      axios.get(`${import.meta.env.VITE_API_URL}/pedidos/lista`, { params: { id_pedido: idPedido } }),
+      axios.get(`${import.meta.env.VITE_API_URL}/clientes`),
+      axios.get(`${import.meta.env.VITE_API_URL}/modelos`),
+      axios.get(`${import.meta.env.VITE_API_URL}/series`)
     ]);
     listaPedidos.value = resP.data;
     clientes.value = resC.data;
@@ -236,7 +236,7 @@ const buscarPedidos = async () => {
   }
 
   try {
-    const res = await axios.get('http://localhost:3000/api/pedidos/lista', {
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/pedidos/lista`, {
       params: { id_pedido: busquedaPedido.value }
     });
     listaPedidos.value = res.data;
@@ -257,7 +257,7 @@ const verDetallePedido = async (pedido) => {
   pedidoDetalle.value = { pedido: null, detalles: [] };
 
   try {
-    const res = await axios.get(`http://localhost:3000/api/pedidos/detalle/${pedido.id_pedido}`);
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/pedidos/detalle/${pedido.id_pedido}`);
     pedidoDetalle.value = res.data;
     const grouped = new Map();
     (res.data.detalles || []).forEach((item) => {
@@ -289,7 +289,7 @@ const guardarCliente = async () => {
       return;
     }
 
-    await axios.post('http://localhost:3000/api/clientes', nuevoCliente.value);
+    await axios.post(`${import.meta.env.VITE_API_URL}/clientes`, nuevoCliente.value);
     cerrarModalCliente();
     await cargarDatos();
     nuevoCliente.value = { nombre: '', apellido: '' };
@@ -303,7 +303,7 @@ const guardarCliente = async () => {
 
 const guardarPedido = async () => {
   try {
-    await axios.post('http://localhost:3000/api/pedidos', nuevoPedido.value);
+    await axios.post(`${import.meta.env.VITE_API_URL}/pedidos`, nuevoPedido.value);
   
     //  Cerramos el formulario y mostramos el Pop-up de exito
     cerrarModal();

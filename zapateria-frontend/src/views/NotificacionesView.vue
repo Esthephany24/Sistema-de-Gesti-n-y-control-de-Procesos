@@ -45,7 +45,7 @@ const notificaciones = ref([]);
 
 const cargarNotificaciones = async () => {
   try {
-    const response = await fetch('http://localhost:3000/api/notificaciones');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/notificaciones`);
     notificaciones.value = await response.json();
   } catch (error) {
     console.error('Error cargando notificaciones:', error);
@@ -55,7 +55,7 @@ const cargarNotificaciones = async () => {
 
 const marcarLeida = async (id) => {
   try {
-    await fetch(`http://localhost:3000/api/notificaciones/${id}`, {
+    await fetch(`${import.meta.env.VITE_API_URL}/notificaciones/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -67,7 +67,7 @@ const marcarLeida = async (id) => {
 
 const marcarTodasLeidas = async () => {
   try {
-    await fetch('http://localhost:3000/api/notificaciones', {
+    await fetch(`${import.meta.env.VITE_API_URL}/notificaciones`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' }
     });

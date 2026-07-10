@@ -112,6 +112,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import * as materialesAPI from '../services/materiales';
 
+
 const router = useRouter();
 const seccionDetalle = ref(null);
 const detalleProduccion = ref([]);
@@ -166,7 +167,7 @@ const fetchSecciones = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await fetch('http://localhost:3000/api/produccion/secciones');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/secciones`);
     if (!response.ok) throw new Error('No se pudieron cargar las secciones');
     const data = await response.json();
 
@@ -186,7 +187,7 @@ const fetchSecciones = async () => {
 
 const fetchDashboardSummary = async () => {
   try {
-    const response = await fetch('http://localhost:3000/api/produccion/dashboard/summary');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/dashboard/summary`);
     if (!response.ok) throw new Error('No se pudo cargar el resumen del dashboard');
     const data = await response.json();
     docenasTerminadasHoy.value = Number(data.terminados_hoy || data.terminadosHoy || 0);
@@ -218,7 +219,7 @@ const fetchDetallePorSeccion = async (seccion) => {
     const estadoDb = stateMap[seccion.key];
 
     const response = await fetch(
-      `http://localhost:3000/api/produccion/dashboard/detalle/${estadoDb}`
+      `${import.meta.env.VITE_API_URL}/produccion/dashboard/detalle/${estadoDb}`
     );
 
     if (!response.ok) {

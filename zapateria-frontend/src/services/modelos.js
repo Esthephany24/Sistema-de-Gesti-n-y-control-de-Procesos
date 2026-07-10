@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE = 'http://localhost:3000/api/modelos';
+const BASE = `${import.meta.env.VITE_API_URL}/modelos`;
 
 export const listModelos = () => axios.get(BASE).then(r => r.data);
 export const getModelo = (id) => axios.get(`${BASE}/${id}`).then(r => r.data);

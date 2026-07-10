@@ -87,7 +87,11 @@ const unreadCount = ref(0);
 
 const cargarNotificaciones = async () => {
   try {
-    const response = await fetch('http://localhost:3000/api/notificaciones');
+    /*const response = await fetch('http://localhost:3000/api/notificaciones');*/
+    const url = `${import.meta.env.VITE_API_URL}/notificaciones`;
+    console.log("URL API:", url);
+    const response = await fetch(url);
+    
     const data = await response.json();
     unreadCount.value = Array.isArray(data)
       ? data.filter((item) => item.leido === false).length

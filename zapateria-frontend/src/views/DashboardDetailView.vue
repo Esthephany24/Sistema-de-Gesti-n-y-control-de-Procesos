@@ -85,6 +85,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import * as materialesAPI from '../services/materiales';
 
+
 const route = useRoute();
 const router = useRouter();
 const section = computed(() => route.params.section || 'stock');
@@ -143,7 +144,7 @@ const fetchStock = async () => {
 };
 
 const fetchProduccion = async () => {
-  const response = await fetch('http://localhost:3000/api/produccion/trazabilidad');
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/trazabilidad`);
   if (!response.ok) throw new Error('No se pudieron cargar los datos de producción');
   const data = await response.json();
   activeDocenas.value = (data || [])
@@ -156,7 +157,7 @@ const fetchProduccion = async () => {
 
 const fetchCompletados = async () => {
   const period = periodForSection(section.value);
-  const response = await fetch(`http://localhost:3000/api/produccion/dashboard/completados?period=${period}`);
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/dashboard/completados?period=${period}`);
   if (!response.ok) throw new Error('No se pudieron cargar los datos completados');
   const data = await response.json();
   completedDocenas.value = (data || []).map((item) => ({

@@ -151,7 +151,7 @@ const guiaForm = ref({
 
 const fetchDespachos = async (params = {}) => {
   try {
-    let url = 'http://localhost:3000/api/despachos';
+    let url = `${import.meta.env.VITE_API_URL}/despachos`;
     const query = new URLSearchParams(params).toString();
     if (query) url += `?${query}`;
     const response = await fetch(url);
@@ -212,7 +212,7 @@ const enviarGuia = async () => {
 
   try {
     await fetch(
-      `http://localhost:3000/api/despachos/${guiaForm.value.id_despacho}/guia`,
+      `${import.meta.env.VITE_API_URL}despachos/${guiaForm.value.id_despacho}/guia`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -240,11 +240,11 @@ const cerrarErrorGuia = () => {
 };
 
 const marcarEnviado = async (item) => {
-  await fetch(`http://localhost:3000/api/despachos/${item.id_despacho}/enviar`, { method: 'PUT' });
+  await fetch(`${import.meta.env.VITE_API_URL}/despachos/${item.id_despacho}/enviar`, { method: 'PUT' });
   fetchDespachos();
 };
 const marcarEntregado = async (item) => {
-  await fetch(`http://localhost:3000/api/despachos/${item.id_despacho}/entregar`, { method: 'PUT' });
+  await fetch(`${import.meta.env.VITE_API_URL}/despachos/${item.id_despacho}/entregar`, { method: 'PUT' });
   fetchDespachos();
 };
 

@@ -346,7 +346,7 @@ const defaultStageList = [
 
 const fetchSecciones = async () => {
   try {
-    const response = await fetch('http://localhost:3000/api/produccion/secciones');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/secciones`);
     if (!response.ok) throw new Error('No se pudo cargar las secciones');
     const data = await response.json();
     secciones.value = data.map((item) => ({
@@ -364,7 +364,7 @@ const fetchSecciones = async () => {
 /*const fetchDocenas = async (estado) => {
   try {
     const estadoQuery = stationStateFetch[estado] || estado;
-    const response = await fetch(`http://localhost:3000/api/produccion/trazabilidad/operarios/${estadoQuery}`);
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/trazabilidad/operarios/${estadoQuery}`);
     if (!response.ok) throw new Error('No se pudo cargar las docenas');
     docenas.value = await response.json();
   } catch (err) {
@@ -381,13 +381,13 @@ const fetchDocenas = async (estado) => {
 
     if (estado === 'DOC_ACABADO') {
 
-      url = 'http://localhost:3000/api/produccion/trazabilidad/doc-acabado-resumen';
+      url = `${import.meta.env.VITE_API_URL}/produccion/trazabilidad/doc-acabado-resumen`;
 
     } else {
 
       const estadoQuery = stationStateFetch[estado] || estado;
 
-      url = `http://localhost:3000/api/produccion/trazabilidad/operarios/${estadoQuery}`;
+      url = `${import.meta.env.VITE_API_URL}/produccion/trazabilidad/operarios/${estadoQuery}`;
     }
 
     const response = await fetch(url);
@@ -429,7 +429,7 @@ const abrirAsignacion = async (docena) => {
     const rol = obtenerRolPorSeccion(seccionSeleccionada.value);
 
     const response = await fetch(
-      `http://localhost:3000/api/produccion/operarios?rol=${rol}`
+      `${import.meta.env.VITE_API_URL}/produccion/operarios?rol=${rol}`
     );
 
     const data = await response.json();
@@ -455,7 +455,7 @@ const cerrarAsignacion = () => {
 const asignarOperario = async (id_docena, id_operario) => {
 
   const response = await fetch(
-    'http://localhost:3000/api/produccion/asignar',
+    `${import.meta.env.VITE_API_URL}/produccion/asignar`,
     {
       method: 'POST',
       headers: {
@@ -487,7 +487,7 @@ const verDetallePedido = async (pedido) => {
     pedidoDetalle.value = pedido;
 
     const response = await fetch(
-      `http://localhost:3000/api/produccion/trazabilidad/doc-acabado-detalle/${pedido.id_pedido}`
+      `${import.meta.env.VITE_API_URL}/produccion/trazabilidad/doc-acabado-detalle/${pedido.id_pedido}`
     );
 
     if (!response.ok) {
@@ -508,7 +508,7 @@ const verDetallePedido = async (pedido) => {
 
 const fetchDocenasCompletadas = async () => {
   try {
-    const response = await fetch('http://localhost:3000/api/produccion/trazabilidad/completadas');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/trazabilidad/completadas`);
     if (!response.ok) throw new Error('No se pudo cargar el avance de pedidos');
     docenasCompletadas.value = await response.json();
   } catch (err) {
@@ -578,7 +578,7 @@ const buscarDocena = async () => {
       params.set('estado', estadoBusqueda);
     }
 
-    const response = await fetch(`http://localhost:3000/api/produccion/trazabilidad/buscar?${params.toString()}`);
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/trazabilidad/buscar?${params.toString()}`);
     const data = await response.json();
 
     if (!response.ok) {
@@ -773,7 +773,7 @@ const registrarAvance = async (docena) => {
       return;
     }
 
-    const response = await fetch('http://localhost:3000/api/produccion/avanzar', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/produccion/avanzar`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
