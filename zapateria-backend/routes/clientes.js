@@ -10,8 +10,8 @@ router.get('/', async (req, res) => {
 
         const result = await pool.query(`
             SELECT id_cliente, nombre, apellido FROM clientes
-            ORDER BY nombre ASC
-        `);
+            ORDER BY nombre ASC`
+        );
 
         res.json(result.rows);
 
