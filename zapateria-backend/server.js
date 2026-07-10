@@ -30,5 +30,5 @@ app.use('/api/materiales', routesMateriales);
 app.use('/api/catalogos', routesCatalogos);
 app.use('/api/notificaciones', routesNotificaciones);
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor de Zapatería corriendo en puerto ${PORT}`));
