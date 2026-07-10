@@ -1,8 +1,6 @@
+
 const { Pool } = require("pg");
 require("dotenv").config();
-
-console.log("DATABASE_URL existe:", !!process.env.DATABASE_URL);
-console.log("DB_HOST:", process.env.DB_HOST);
 
 const isProduction = process.env.DATABASE_URL;
 
